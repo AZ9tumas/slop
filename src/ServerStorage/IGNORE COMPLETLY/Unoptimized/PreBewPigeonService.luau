@@ -1,0 +1,709 @@
+--local Knit = require(game:GetService("ReplicatedStorage").Packages.Knit)
+--local ReplicatedStorage = game:GetService("ReplicatedStorage")
+--local Players = game:GetService("Players")
+--local RunService = game:GetService("RunService")
+--local HttpService = game:GetService("HttpService")
+--local Remote = Instance.new("RemoteEvent")
+--Remote.Name = "PigeonCollected"
+--Remote.Parent = ReplicatedStorage.Remotes
+
+--local PigeonService = Knit.CreateService {
+--	Name = "PigeonService",
+--	Client = {},
+--}
+
+--local OfflineCollection = require(ReplicatedStorage.Info:WaitForChild("NewOfflineCollection"))
+--local Beaks = require(ReplicatedStorage.Info:WaitForChild("NewBeaksInfo"))
+--local EggModule = require(ReplicatedStorage.Info:WaitForChild("EggInfo"))
+--local PigeonInfo = require(ReplicatedStorage.Info:WaitForChild("PigeonInfo"))
+--local MutationInfo = require(ReplicatedStorage.Info:WaitForChild("MutationsInfo"))
+--local FriendBoostInfo = require(ReplicatedStorage.Info:WaitForChild("FriendBoostInfo"))
+
+--local pigeonFolder = ReplicatedStorage.Game:WaitForChild("Pigeons")
+--local PlotService
+--local DataService
+
+--local Pigeons = {}
+--local HasFriendInGame = {}
+--local MutationEmitters = {}
+--local PreloadedAnimation = Instance.new("Animation")
+--PreloadedAnimation.AnimationId = "rbxassetid://106018986813285"
+
+--for _, v in ipairs(ReplicatedStorage.Game.MutationParticles:GetChildren()) do
+--	MutationEmitters[v.Name] = v
+--end
+
+--local function recomputeFriendCache()
+--	local allPlayers = Players:GetPlayers()
+--	for _, p in ipairs(allPlayers) do
+--		HasFriendInGame[p.UserId] = false
+--	end
+--	for i = 1, #allPlayers do
+--		local a = allPlayers[i]
+--		for j = i + 1, #allPlayers do
+--			local b = allPlayers[j]
+--			if a:IsFriendsWith(b.UserId) then
+--				HasFriendInGame[a.UserId] = true
+--				HasFriendInGame[b.UserId] = true
+--			end
+--		end
+--	end
+--end
+
+--Players.PlayerAdded:Connect(recomputeFriendCache)
+--Players.PlayerRemoving:Connect(recomputeFriendCache)
+
+--local function playIdleAnimation(pigeonModel)
+--	if not pigeonModel.PrimaryPart then return end
+--	local humanoid = pigeonModel:FindFirstChildOfClass("Humanoid")
+--	local controller = pigeonModel:FindFirstChildOfClass("AnimationController")
+--	if not humanoid and not controller then
+--		controller = Instance.new("AnimationController")
+--		controller.Name = "PigeonAnimController"
+--		controller.Parent = pigeonModel
+--	end
+--	local animator = (humanoid and humanoid:FindFirstChildOfClass("Animator")) or (controller and controller:FindFirstChildOfClass("Animator"))
+--	if not animator then
+--		animator = Instance.new("Animator")
+--		animator.Parent = humanoid or controller
+--	end
+--	local anim = PreloadedAnimation:Clone()
+--	local track = animator:LoadAnimation(anim)
+--	track.Looped = true
+--	track:Play()
+--	return track
+--end
+
+--local function pickPigeonFromEgg(eggName, boost)
+--	local eggInfo = EggModule[eggName]
+--	if not eggInfo or not eggInfo.Pigeons then
+--		return nil, nil, nil
+--	end
+--	local serverLuck = workspace:GetAttribute("ServerLuck") or 1
+--	local boostMultiplier = 1 + ((boost or 0) * 0.1)
+--	local effectiveLuck = serverLuck * boostMultiplier
+--	local totalChance = 0
+--	local chances = {}
+--	for _, entry in ipairs(eggInfo.Pigeons) do
+--		local adjustedChance = math.max(1, math.floor(entry.Chance * effectiveLuck))
+--		chances[#chances + 1] = adjustedChance
+--		totalChance = totalChance + adjustedChance
+--	end
+--	local rand = math.random(1, totalChance)
+--	local cumulative = 0
+--	local pickedEntry = nil
+--	for i, entry in ipairs(eggInfo.Pigeons) do
+--		cumulative = cumulative + chances[i]
+--		if rand <= cumulative then
+--			pickedEntry = entry
+--			break
+--		end
+--	end
+--	if not pickedEntry then
+--		return nil, nil, nil
+--	end
+--	return pickedEntry.Name, pickedEntry.Weight, pickedEntry.Chance
+--end
+
+--local function rollMutation()
+--	local totalChance = 0
+--	for _, info in pairs(MutationInfo) do
+--		totalChance = totalChance + (info.Chance or 0)
+--	end
+--	if totalChance <= 0 then return nil end
+--	local roll = math.random() * totalChance
+--	local cumulative = 0
+--	for name, info in pairs(MutationInfo) do
+--		cumulative = cumulative + (info.Chance or 0)
+--		if roll <= cumulative then
+--			return name
+--		end
+--	end
+--	return nil
+--end
+
+--local function getModelCenter(model)
+--	if not model then return nil end
+--	local cf, _ = model:GetBoundingBox()
+--	return cf.Position
+--end
+
+--local function isNear(player, pigeonModel, range)
+--	local character = player.Character
+--	if not character or not character.PrimaryPart then return false end
+--	local center = getModelCenter(pigeonModel)
+--	if not center then return false end
+--	local distance = (character.PrimaryPart.Position - center).Magnitude
+--	return distance <= (range or 10)
+--end
+
+--local function updateBillboard(board, beaks, rate)
+--	local newBeaks = tostring(math.floor(beaks or 0))
+--	if board.SavedMoney.Amount.Text ~= newBeaks then
+--		board.SavedMoney.Amount.Text = newBeaks
+--	end
+--	local newRate = string.format("%.1f $/s", rate or 0)
+--	if board.AmountPerSecond.Text ~= newRate then
+--		board.AmountPerSecond.Text = newRate
+--	end
+--end
+
+--function PigeonService:TryCollectNearby(player, range)
+--	local userPigeons = Pigeons[player.UserId]
+--	if not userPigeons then return end
+--	for id, pigeon in pairs(userPigeons) do
+--		if (pigeon.EarnedBeaks or 0) > 0 and pigeon.Model and isNear(player, pigeon.Model, range or 2) then
+--			local earned = pigeon.EarnedBeaks
+--			local profile = DataService:GetProfile(player)
+--			if profile then
+--				profile.Data.Beaks = (profile.Data.Beaks or 0) + earned
+--				if profile.Data.Gamepasses and profile.Data.Gamepasses.x2Beaks == true then
+--					profile.Data.Beaks = profile.Data.Beaks + earned
+--				end
+--				pigeon.EarnedBeaks = 0
+--				if pigeon.Board then
+--					pigeon.Board.SavedMoney.Amount.Text = "0"
+--				elseif pigeon.Model and pigeon.Model:FindFirstChild("PigeonBillboard") then
+--					local board = pigeon.Model.PigeonBillboard
+--					board.SavedMoney.Amount.Text = "0"
+--				end
+--				Remote:FireClient(player, earned, getModelCenter(pigeon.Model))
+--			end
+--		end
+--	end
+--end
+
+--local function getModelLargestPart(model)
+--	local largestPart = nil
+--	local largestSize = 0
+--	for _, descendant in ipairs(model:GetDescendants()) do
+--		if descendant:IsA("BasePart") then
+--			local size = descendant.Size.X * descendant.Size.Y * descendant.Size.Z
+--			if size > largestSize then
+--				largestSize = size
+--				largestPart = descendant
+--			end
+--		end
+--	end
+--	return largestPart
+--end
+
+--local function addMutationVisual(pigeonModel, mutationName)
+--	if not pigeonModel or not mutationName then return end
+--	local largestPart = getModelLargestPart(pigeonModel)
+--	if not largestPart then return end
+--	local emitterTemplate = MutationEmitters[mutationName]
+--	if not emitterTemplate then return end
+--	if largestPart:FindFirstChild("MutationEmitter") then
+--		largestPart.MutationEmitter:Destroy()
+--	end
+--	local emitter = emitterTemplate:Clone()
+--	emitter.Name = "MutationEmitter"
+--	emitter.Parent = largestPart
+--	emitter.Enabled = true
+--	return emitter
+--end
+
+--local function getScale(weight)
+--	local minWeight, maxWeight = 20, 200
+--	local minScale, maxScale = 0.15, 0.252
+--	if weight < minWeight then
+--		weight = minWeight
+--	elseif weight > maxWeight then
+--		weight = maxWeight
+--	end
+--	return minScale + ((weight - minWeight) / (maxWeight - minWeight)) * (maxScale - minScale)
+--end
+
+--local function newId()
+--	return HttpService:GenerateGUID(false)
+--end
+
+--function PigeonService:RewardPigeon(player, egg)
+--	local plot = PlotService:GetPlayerPlot(player)
+--	if not plot then return end
+--	local pigeonName, baseWeight, chance = pickPigeonFromEgg(egg.Rarity.." Egg", egg.LuckBoost)
+--	local rolledMutation = egg.PreMutation
+--	if not pigeonName then return end
+--	local template = pigeonFolder:FindFirstChild(pigeonName)
+--	if not template then return end
+--	local info = PigeonInfo[pigeonName]
+--	local rolledWeight = baseWeight
+--	if info and info.Weight then
+--		local factor = math.random() * (info.Weight.Max - info.Weight.Min) + info.Weight.Min
+--		rolledWeight = math.floor(baseWeight * factor * 100) / 100
+--	end
+--	if egg.SizeBoost then
+--		rolledWeight = math.floor(rolledWeight * (1 + egg.SizeBoost * 0.1) * 100) / 100
+--	end
+--	local mutation = egg.PreMutation or rolledMutation
+--	local clone = template:Clone()
+--	clone.Parent = plot:FindFirstChild("Pigeons") or Instance.new("Folder", plot)
+--	local scale = getScale(rolledWeight)
+--	if clone.Name ~= "Pigeon" then
+--		clone:ScaleTo(scale)
+--	end
+--	local relativeCFrame = CFrame.new(unpack(egg.Position))
+--	local plotRoot = plot.Model:FindFirstChild("Floor").Part
+--	local worldCFrame = plotRoot.CFrame:ToWorldSpace(relativeCFrame)
+--	local function getPivotOffset(model)
+--		local primary = model.PrimaryPart
+--		local size = model:GetExtentsSize()
+--		local cf = model:GetBoundingBox()
+--		local bottomY = (cf.Position - Vector3.new(0, size.Y/2, 0)).Y
+--		local pivotY = primary.Position.Y
+--		return pivotY - bottomY
+--	end
+--	local rayOrigin = worldCFrame.Position + Vector3.new(0, 5, 0)
+--	local rayDirection = Vector3.new(0, -10, 0)
+--	local rayParams = RaycastParams.new()
+--	rayParams.FilterType = Enum.RaycastFilterType.Include
+--	rayParams.FilterDescendantsInstances = {plotRoot}
+--	local result = workspace:Raycast(rayOrigin, rayDirection, rayParams)
+--	local offsetY = getPivotOffset(clone)
+--	if result then
+--		worldCFrame = CFrame.new(Vector3.new(worldCFrame.Position.X, result.Position.Y + offsetY, worldCFrame.Position.Z)) * CFrame.Angles(worldCFrame:ToEulerAnglesXYZ())
+--	end
+--	if clone.PrimaryPart then
+--		clone:SetPrimaryPartCFrame(worldCFrame)
+--	else
+--		clone:PivotTo(worldCFrame)
+--	end
+--	if mutation then
+--		addMutationVisual(clone, mutation)
+--	end
+--	local board = ReplicatedStorage.Game.PigeonBillboard:Clone()
+--	board.Parent = clone
+--	board.Adornee = clone:WaitForChild("Head")
+--	local mutationText = mutation and (" ("..mutation..")") or ""
+--	board.PigeonName.Text = pigeonName.." ["..rolledWeight.."Kg]"..mutationText
+--	board.AmountPerSecond.Text = info.Multiplier.." $/s"
+--	board.SavedMoney.Amount.Text = "0"
+--	if mutation then
+--		if board.Mutations[mutation] then
+--			board.Mutations[mutation].Visible = true
+--		end
+--	end
+--	playIdleAnimation(clone)
+--	clone:SetAttribute("Owner", player.UserId)
+--	clone:SetAttribute("PigeonID", egg.ID)
+--	Pigeons[player.UserId] = Pigeons[player.UserId] or {}
+--	Pigeons[player.UserId][egg.ID] = {
+--		ID = egg.ID,
+--		Name = pigeonName,
+--		Rarity = egg.Rarity,
+--		RelativeCFrame = egg.Position,
+--		Weight = rolledWeight,
+--		EarnedBeaks = 0,
+--		Model = clone,
+--		Mutation = mutation,
+--		Board = board
+--	}
+--	local profile = DataService:GetProfile(player)
+--	if profile then
+--		profile.Data.PlacedPigeons = profile.Data.PlacedPigeons or {}
+--		table.insert(profile.Data.PlacedPigeons, {
+--			ID = egg.ID,
+--			Name = pigeonName,
+--			Rarity = egg.Rarity,
+--			RelativeCFrame = egg.Position,
+--			Weight = rolledWeight,
+--			EarnedBeaks = 0,
+--			Mutation = mutation
+--		})
+--		profile.Data.Unlocked = profile.Data.Unlocked or {}
+--		profile.Data.Unlocked[pigeonName] = true
+--	end
+--end
+
+--function PigeonService:StorePigeon(player, pigeonId)
+--	local pigeons = Pigeons[player.UserId]
+--	if not pigeons then return false, "No pigeons found" end
+--	local pigeonData = pigeons[pigeonId]
+--	if not pigeonData then
+--		return false, "Pigeon not found"
+--	end
+--	if pigeonData.Model and pigeonData.Model.Parent then
+--		pigeonData.Model:Destroy()
+--	end
+--	pigeons[pigeonId] = nil
+--	local inventoryService = Knit.GetService("InventoryService")
+--	--inventoryService:AddItem(player, pigeonData.Name, 1, pigeonData)
+--	inventoryService:AddItem(player, pigeonData.Name, 1, {
+--		ID = pigeonId,
+--		Name = "PigeonName",
+--		Weight = pigeonData.Weight,       -- from PigeonService:RewardPigeon
+--		Mutation = pigeonData.Mutation    -- "none" or mutation type
+--	})
+--	local profile = DataService:GetProfile(player)
+--	if profile then
+--		if profile.Data.PlacedPigeons then
+--			for i = #profile.Data.PlacedPigeons, 1, -1 do
+--				if profile.Data.PlacedPigeons[i].ID == pigeonId then
+--					table.remove(profile.Data.PlacedPigeons, i)
+--					break
+--				end
+--			end
+--		end
+--		self:SavePigeons(player, profile)
+--	end
+--	return true, pigeonData
+--end
+
+--local function serializeCFrame(cf)
+--	return {cf:GetComponents()}
+--end
+
+--function PigeonService:PlacePigeon(player, pigeonData, position)
+--	local plot = PlotService:GetPlayerPlot(player)
+--	if not plot then
+--		return false, "No plot"
+--	end
+--	local template = pigeonFolder:FindFirstChild(pigeonData.Name)
+--	if not template then
+--		return false, "No pigeon template for ".. tostring(pigeonData.Name)
+--	end
+--	local clone = template:Clone()
+--	clone.Parent = plot:FindFirstChild("Pigeons") or Instance.new("Folder", plot)
+--	local scale = getScale(pigeonData.Weight)
+--	if pigeonData.Name ~= "Pigeon" then
+--		clone:ScaleTo(scale)
+--	end
+--	clone:SetPrimaryPartCFrame(position)
+--	clone:SetAttribute("Owner", player.UserId)
+--	clone:SetAttribute("PigeonID", pigeonData.ID)
+--	local info = PigeonInfo[pigeonData.Name]
+--	local board = ReplicatedStorage.Game.PigeonBillboard:Clone()
+--	board.Adornee = clone:WaitForChild("Head")
+--	board.Parent = clone
+--	board.PigeonName.Text = pigeonData.Name.." ["..(pigeonData.Weight or "?").."Kg]"
+--	board.AmountPerSecond.Text = (info and info.Multiplier or "?").." $/s"
+--	board.SavedMoney.Amount.Text = tostring(math.floor(pigeonData.EarnedBeaks or 0))
+--	if pigeonData.Mutation then
+--		if board.Mutations[pigeonData.Mutation] then
+--			board.Mutations[pigeonData.Mutation].Visible = true
+--		end
+--	end
+--	if pigeonData.Mutation then
+--		addMutationVisual(clone, pigeonData.Mutation)
+--	end
+--	playIdleAnimation(clone)
+--	local plotRoot = plot.Model:FindFirstChild("Floor").Part
+--	local relativeCFrame = plotRoot.CFrame:ToObjectSpace(position)
+--	Pigeons[player.UserId] = Pigeons[player.UserId] or {}
+--	Pigeons[player.UserId][pigeonData.ID] = {
+--		ID = pigeonData.ID,
+--		Name = pigeonData.Name,
+--		Rarity = pigeonData.Rarity,
+--		RelativeCFrame = {relativeCFrame:GetComponents()},
+--		Weight = pigeonData.Weight,
+--		EarnedBeaks = pigeonData.EarnedBeaks or 0,
+--		Model = clone,
+--		Mutation = pigeonData.Mutation,
+--		Board = board
+--	}
+--	local profile = DataService:GetProfile(player)
+--	if profile then
+--		profile.Data.PlacedPigeons = profile.Data.PlacedPigeons or {}
+--		table.insert(profile.Data.PlacedPigeons, {
+--			ID = pigeonData.ID,
+--			Name = pigeonData.Name,
+--			Rarity = pigeonData.Rarity,
+--			RelativeCFrame = {relativeCFrame:GetComponents()},
+--			Weight = pigeonData.Weight,
+--			EarnedBeaks = pigeonData.EarnedBeaks or 0,
+--			Mutation = pigeonData.Mutation
+--		})
+--	end
+--	return true, clone
+--end
+
+--function PigeonService:PlaceFromInventory(player, pigeonId, position)
+--	local inv = Knit.GetService("InventoryService")
+--	local uniques = inv:GetUniquePigeons(player)
+--	if not uniques then
+--		return false, "No pigeons in inventory"
+--	end
+--	local pigeonData = uniques[pigeonId]
+--	local pigeonIndex = table.find(uniques, pigeonId)
+--	if not pigeonData then
+--		return false, "Pigeon not found"
+--	end
+--	local success, clone = PigeonService:PlacePigeon(player, pigeonData, position)
+--	if success then
+--		table.remove(uniques, pigeonIndex)
+--		local InventoryService = Knit.GetService("InventoryService")
+--		InventoryService:RemoveItem(player, pigeonData.Name, 1, pigeonData.ID)
+--		local profile = DataService:GetProfile(player)
+--		if profile then
+--			inv:SaveInventory(player, profile)
+--		end
+--	end
+--	return success, clone
+--end
+
+--function PigeonService:StealPigeon(thief, pigeonId)
+--	local ownerUserId
+--	local pigeonData
+--	for uid, list in pairs(Pigeons) do
+--		if list[pigeonId] then
+--			ownerUserId = uid
+--			pigeonData = list[pigeonId]
+--			break
+--		end
+--	end
+--	if not pigeonData then return false, "Pigeon not found" end
+--	if ownerUserId == thief.UserId then return false, "Cannot steal your own pigeon" end
+--	if pigeonData.Model and pigeonData.Model.Parent then
+--		pigeonData.Model:Destroy()
+--	end
+--	local cloneData = table.clone(pigeonData)
+--	cloneData.ID = newId()
+--	cloneData.Model = nil
+--	cloneData.EarnedBeaks = 0
+--	local inv = Knit.GetService("InventoryService")
+--	inv:AddItem(thief, cloneData.Name, 1, cloneData)
+--	local thiefProfile = DataService:GetProfile(thief)
+--	if thiefProfile then
+--		inv:SaveInventory(thief, thiefProfile)
+--	end
+--	if Pigeons[ownerUserId] then
+--		Pigeons[ownerUserId][pigeonId] = nil
+--	end
+--	local ownerPlayer = Players:GetPlayerByUserId(ownerUserId)
+--	if ownerPlayer then
+--		local profile = DataService:GetProfile(ownerPlayer)
+--		if profile and profile.Data.PlacedPigeons then
+--			for i = #profile.Data.PlacedPigeons, 1, -1 do
+--				if profile.Data.PlacedPigeons[i].ID == pigeonId then
+--					table.remove(profile.Data.PlacedPigeons, i)
+--					break
+--				end
+--			end
+--			self:SavePigeons(ownerPlayer, profile)
+--		end
+--	end
+--	return true, cloneData
+--end
+
+--function PigeonService.Client:PlaceFromInventory(player, pigeonId, position)
+--	return self.Server:PlaceFromInventory(player, pigeonId, position)
+--end
+
+--function PigeonService.Client:Store(player, id)
+--	return self.Server:StorePigeon(player, id)
+--end
+
+--function PigeonService:SavePigeons(player, profile)
+--	local pigeons = Pigeons[player.UserId] or {}
+--	profile.Data.PlacedPigeons = {}
+--	for _, pigeon in pairs(pigeons) do
+--		table.insert(profile.Data.PlacedPigeons, {
+--			ID = pigeon.ID,
+--			Name = pigeon.Name,
+--			Rarity = pigeon.Rarity,
+--			RelativeCFrame = pigeon.RelativeCFrame,
+--			Weight = pigeon.Weight,
+--			EarnedBeaks = pigeon.EarnedBeaks or 0,
+--			Mutation = pigeon.Mutation
+--		})
+--	end
+--	profile.Data.LastSave = os.time()
+--end
+
+--function PigeonService:LoadPigeons(player, profile)
+--	Pigeons[player.UserId] = {}
+--	local plot = PlotService:GetPlayerPlot(player)
+--	if not plot then return end
+--	local now = os.time()
+--	local lastSave = profile.Data.LastSave or now
+--	local cycles = OfflineCollection:GetOfflineCycles(lastSave)
+--	for _, pigeonData in ipairs(profile.Data.PlacedPigeons or {}) do
+--		local template = pigeonFolder:FindFirstChild(pigeonData.Name)
+--		if not template then
+--			continue
+--		end
+--		local clone = template:Clone()
+--		clone.Parent = plot:FindFirstChild("Pigeons") or Instance.new("Folder", plot)
+--		local scale = getScale(pigeonData.Weight)
+--		if pigeonData.Name ~= "Pigeon" then
+--			clone:ScaleTo(scale)
+--		end
+--		local relativeCFrame = CFrame.new(unpack(pigeonData.RelativeCFrame))
+--		local plotRoot = plot.Model:FindFirstChild("Floor").Part
+--		local worldCFrame = plotRoot.CFrame:ToWorldSpace(relativeCFrame)
+--		local function getPivotOffset(model)
+--			local primary = model.PrimaryPart
+--			local size = model:GetExtentsSize()
+--			local cf = model:GetBoundingBox()
+--			local bottomY = (cf.Position - Vector3.new(0, size.Y/2, 0)).Y
+--			local pivotY = primary.Position.Y
+--			return pivotY - bottomY
+--		end
+--		local rayOrigin = worldCFrame.Position + Vector3.new(0, 5, 0)
+--		local rayDirection = Vector3.new(0, -10, 0)
+--		local rayParams = RaycastParams.new()
+--		rayParams.FilterType = Enum.RaycastFilterType.Include
+--		rayParams.FilterDescendantsInstances = {plotRoot}
+--		local result = workspace:Raycast(rayOrigin, rayDirection, rayParams)
+--		local offsetY = getPivotOffset(clone)
+--		if result then
+--			worldCFrame = CFrame.new(Vector3.new(worldCFrame.Position.X, result.Position.Y + offsetY, worldCFrame.Position.Z)) * CFrame.Angles(worldCFrame:ToEulerAnglesXYZ())
+--		end
+--		if clone.PrimaryPart then
+--			clone:SetPrimaryPartCFrame(worldCFrame)
+--		else
+--			clone:PivotTo(worldCFrame)
+--		end
+--		clone:SetAttribute("Owner", player.UserId)
+--		clone:SetAttribute("PigeonID", pigeonData.ID)
+--		local info = PigeonInfo[pigeonData.Name]
+--		local earned = pigeonData.EarnedBeaks or 0
+--		if cycles > 0 and info then
+--			local rate = Beaks:GetBeaksPerSecond(pigeonData.Weight, info)
+--			if pigeonData.Mutation then
+--				rate = rate * (MutationInfo.Multipliers[pigeonData.Mutation] or 1)
+--			end
+--			local perCycle = rate * OfflineCollection.Cycle * OfflineCollection.Scaling
+--			local totalGain = perCycle * cycles
+--			earned = (earned or 0) + totalGain
+--		end
+--		local board = ReplicatedStorage.Game.PigeonBillboard:Clone()
+--		board.Parent = clone
+--		board.Adornee = clone:WaitForChild("Head")
+--		local mutationText = pigeonData.Mutation and (" ("..pigeonData.Mutation..")") or ""
+--		board.PigeonName.Text = pigeonData.Name.." ["..(pigeonData.Weight or "?").."Kg]"..mutationText
+--		board.AmountPerSecond.Text = (info and info.Multiplier or "?").." $/s"
+--		board.SavedMoney.Amount.Text = tostring(math.floor(earned))
+--		if pigeonData.Mutation then
+--			if board.Mutations[pigeonData.Mutation] then
+--				board.Mutations[pigeonData.Mutation].Visible = true
+--			end
+--		end
+--		if pigeonData.Mutation then
+--			addMutationVisual(clone, pigeonData.Mutation)
+--		end
+--		playIdleAnimation(clone)
+--		Pigeons[player.UserId][pigeonData.ID] = {
+--			ID = pigeonData.ID,
+--			Name = pigeonData.Name,
+--			Rarity = pigeonData.Rarity,
+--			RelativeCFrame = pigeonData.RelativeCFrame,
+--			Weight = pigeonData.Weight,
+--			EarnedBeaks = earned,
+--			Model = clone,
+--			Mutation = pigeonData.Mutation,
+--			Board = board
+--		}
+--	end
+--end
+
+--function PigeonService:SetMutation(pigeonid, mutation)
+--	for userId, list in pairs(Pigeons) do
+--		for id, pd in pairs(list) do
+--			if pd.ID == pigeonid then
+--				if pd.Mutation then
+--					break
+--				end
+--				pd.Mutation = mutation
+--				if pd.Model then
+--					if mutation then
+--						addMutationVisual(pd.Model, mutation)
+--					else
+--						for _, desc in ipairs(pd.Model:GetDescendants()) do
+--							if desc.Name == "MutationEmitter" then
+--								desc:Destroy()
+--							end
+--						end
+--					end
+--					pd.Model:SetAttribute("Mutation", mutation)
+--					local board = pd.Board or pd.Model:FindFirstChild("PigeonBillboard")
+--					local info = PigeonInfo[pd.Name]
+--					local baseRate = info and info.Multiplier or 0
+--					local displayRate = baseRate
+--					if mutation and MutationInfo and MutationInfo.Multipliers and MutationInfo.Multipliers[mutation] then
+--						displayRate = baseRate * MutationInfo.Multipliers[mutation]
+--					end
+--					if board then
+--						local mtext = mutation and (" ("..mutation..")") or ""
+--						board.PigeonName.Text = pd.Name.." ["..(pd.Weight or "?").."Kg]"..mtext
+--						board.AmountPerSecond.Text = tostring(displayRate).." $/s"
+--					end
+--				end
+--				local player = Players:GetPlayerByUserId(userId)
+--				if player then
+--					local profile = DataService:GetProfile(player)
+--					if profile and profile.Data.PlacedPigeons then
+--						for _, saved in ipairs(profile.Data.PlacedPigeons) do
+--							if saved.ID == pigeonid then
+--								saved.Mutation = mutation
+--								break
+--							end
+--						end
+--						self:SavePigeons(player, profile)
+--					end
+--				end
+--				return true, pd
+--			end
+--		end
+--	end
+--	return false, "Pigeon not found"
+--end
+
+--function PigeonService:KnitStart()
+--	PlotService = Knit.GetService("PlotService")
+--	DataService = Knit.GetService("DataService")
+--	recomputeFriendCache()
+--	local incomeTickAcc = 0
+--	local collectTickAcc = 0
+--	local INCOME_INTERVAL = 1
+--	local COLLECT_INTERVAL = 0.5
+--	RunService.Heartbeat:Connect(function(dt)
+--		incomeTickAcc = incomeTickAcc + dt
+--		collectTickAcc = collectTickAcc + dt
+--		if incomeTickAcc >= INCOME_INTERVAL then
+--			incomeTickAcc = incomeTickAcc - INCOME_INTERVAL
+--			for userId, pigeonList in pairs(Pigeons) do
+--				local player = Players:GetPlayerByUserId(userId)
+--				if player then
+--					local profile = DataService:GetProfile(player)
+--					if profile then
+--						player.leaderstats.Beaks.Value = profile.Data.Beaks or 0
+--						local totalGain = 0
+--						local friendBoost = HasFriendInGame[player.UserId] and FriendBoostInfo.MoneyMultiplier or 1
+--						for _, pigeon in pairs(pigeonList) do
+--							local info = PigeonInfo[pigeon.Name]
+--							if info then
+--								local rate = Beaks:GetBeaksPerSecond(pigeon.Weight, info)
+--								if pigeon.Mutation then
+--									rate = rate * (MutationInfo.Multipliers[pigeon.Mutation] or 1)
+--								end
+--								rate = rate * friendBoost
+--								pigeon.EarnedBeaks = (pigeon.EarnedBeaks or 0) + rate
+--								totalGain = totalGain + rate
+--								local board = pigeon.Board
+--								if not board and pigeon.Model then
+--									board = pigeon.Model:FindFirstChild("PigeonBillboard")
+--									pigeon.Board = board
+--								end
+--								if board then
+--									updateBillboard(board, pigeon.EarnedBeaks, rate)
+--								end
+--							end
+--						end
+--					end
+--				end
+--			end
+--		end
+--		if collectTickAcc >= COLLECT_INTERVAL then
+--			collectTickAcc = collectTickAcc - COLLECT_INTERVAL
+--			for _, player in ipairs(Players:GetPlayers()) do
+--				pcall(function()
+--					self:TryCollectNearby(player, 5)
+--				end)
+--			end
+--		end
+--	end)
+--end
+
+--return PigeonService
