@@ -29,6 +29,19 @@ _G.sendGlobalMessage = function(message)
 end
 
 local productIds = require(game.ReplicatedStorage.Info:WaitForChild("ProductIds"))
+local EggEvolutionInfo = require(game.ReplicatedStorage.Info:WaitForChild("EggEvolutionInfo"))
+
+-- Build lookup tables for EggEvolution product IDs
+local EggEvolutionSkipProducts = {}
+local EggEvolutionProtectionProducts = {}
+for eggName, data in pairs(EggEvolutionInfo.Evolutions) do
+	if data.SkipProductId then
+		EggEvolutionSkipProducts[data.SkipProductId] = eggName
+	end
+	if data.ProtectionProductId then
+		EggEvolutionProtectionProducts[data.ProtectionProductId] = eggName
+	end
+end
 
 local MAX_MULTIPLIER = 8
 local DURATION_INCREMENT = 15 * 60
@@ -361,6 +374,28 @@ MarketplaceService.ProcessReceipt = function(receiptInfo)
 				PigeonService:StealPigeon(player, pigeonId)
 			end
 			--game.ReplicatedStorage.Remotes.Notification:FireClient(player,"Successfully Stole This Pigeon")
+		end
+	end
+
+	-- Handle EggEvolution Skip products
+	if EggEvolutionSkipProducts[receiptInfo.ProductId] then
+		if player then
+			local EggEvolutionService = Knit.GetService("EggEvolutionService")
+			local success = EggEvolutionService:ProcessSkip(player)
+			if not success then
+				return Enum.ProductPurchaseDecision.NotProcessedYet
+			end
+		end
+	end
+
+	-- Handle EggEvolution Protection products
+	if EggEvolutionProtectionProducts[receiptInfo.ProductId] then
+		if player then
+			local EggEvolutionService = Knit.GetService("EggEvolutionService")
+			local success = EggEvolutionService:ProcessProtection(player)
+			if not success then
+				return Enum.ProductPurchaseDecision.NotProcessedYet
+			end
 		end
 	end
 
