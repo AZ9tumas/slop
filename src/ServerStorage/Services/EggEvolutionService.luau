@@ -173,11 +173,15 @@ function EggEvolutionService:StartEvolution(player, eggUUID)
 		IsSuccess = nil,
 		CanDevolve = false,
 		ProtectionProductId = details.ProtectionProductId,
-		SkipProductId = details.SkipProductId
+		SkipProductId = details.SkipProductId,
+		DelayThread = nil -- Reference to the delayed task for cancellation
 	}
 	
 	-- Spawn a delayed task to finish evolution when time is up
-	task.delay(duration, function()
+	-- Store reference for potential cancellation on player disconnect
+	local evolution = ActiveEvolutions[player]
+	evolution.DelayThread = task.delay(duration, function()
+		-- Check if evolution still exists and belongs to same egg (player might have started a new one)
 		if ActiveEvolutions[player] and ActiveEvolutions[player].EggUUID == eggUUID then
 			self:_finishEvolution(player)
 		end
@@ -440,8 +444,15 @@ end
 function EggEvolutionService:KnitStart()
 	-- Cleanup on player leaving
 	Players.PlayerRemoving:Connect(function(player)
-		-- Evolution data is session-based, simply clear it
-		-- The egg is lost if player leaves during evolution
+		local evolution = ActiveEvolutions[player]
+		if evolution then
+			-- Cancel any pending delayed task to prevent it from running after cleanup
+			if evolution.DelayThread then
+				task.cancel(evolution.DelayThread)
+			end
+		end
+		-- Evolution data is session-based and intentionally not persisted.
+		-- Per the specification: "active evolutions are not saved to DataStores and are lost if the player disconnects"
 		ActiveEvolutions[player] = nil
 	end)
 end
