@@ -55,6 +55,7 @@ local ProfileStore = ProfileService.GetProfileStore(
             Running = nil,
             FinishTime = nil
         },
+        ActiveEvolution = nil,
     }
 )
 
