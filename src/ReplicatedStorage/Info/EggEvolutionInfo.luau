@@ -1,9 +1,5 @@
 local EggEvolutionInfo = {}
 
-----------------------------------------------------------------
--- EVOLUTION PATH (order matters)
-----------------------------------------------------------------
-
 EggEvolutionInfo.Path = {
 	"Common Egg",
 	"Uncommon Egg",
@@ -24,10 +20,6 @@ EggEvolutionInfo.Path = {
 	"Secret Egg",
 	"Gravity Egg",
 }
-
-----------------------------------------------------------------
--- EVOLUTION RULES (DATA ONLY)
-----------------------------------------------------------------
 
 EggEvolutionInfo.Evolutions = {
 
@@ -227,7 +219,7 @@ EggEvolutionInfo.Evolutions = {
 	},
 
 	["Space Egg"] = {
-		Enabled = true,
+		Enabled = false,
 		To = "Secret Egg",
 		OnFail = "Glitched Egg",
 
@@ -266,17 +258,10 @@ EggEvolutionInfo.Evolutions = {
 	},
 }
 
-----------------------------------------------------------------
--- FUNCTIONS
-----------------------------------------------------------------
 
---[[
-	Returns the evolution details for a given egg.
-	Includes: Cost, Time, SuccessChance, NextEgg, PreviousEgg (Fail Target)
-]]
 function EggEvolutionInfo.GetEvolutionDetails(currentEggName)
 	local data = EggEvolutionInfo.Evolutions[currentEggName]
-	
+
 	if not data or not data.Enabled or not data.To then
 		return nil
 	end
@@ -285,37 +270,31 @@ function EggEvolutionInfo.GetEvolutionDetails(currentEggName)
 		CurrentEgg = currentEggName,
 		NextEgg = data.To,
 		FailEgg = data.OnFail,
-		
+
 		Cost = data.Cost,
 		Time = data.Time,
-		
+
 		SuccessChance = data.SuccessChance,
 		FailChance = 1 - data.SuccessChance,
-		
+
 		ProtectionProductId = data.ProtectionProductId,
 		SkipProductId = data.SkipProductId
 	}
 end
 
---[[
-	Calculates the result of an evolution attempt based on the configured chances.
-	Returns: ResultEggName (string), IsSuccess (boolean)
-]]
 function EggEvolutionInfo.Evolve(currentEggName)
 	local details = EggEvolutionInfo.GetEvolutionDetails(currentEggName)
-	
+
 	if not details then
 		warn("Cannot evolve egg:", currentEggName)
-		return currentEggName, false -- Stay same if invalid
+		return currentEggName, false
 	end
-	
-	local roll = math.random() -- Returns [0, 1)
-	
+
+	local roll = math.random() -- [0, 1)
+
 	if roll <= details.SuccessChance then
-		-- Success!
 		return details.NextEgg, true
 	else
-		-- Failure!
 		return details.FailEgg, false
 	end
 end
