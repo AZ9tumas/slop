@@ -42,10 +42,10 @@ EggEvolutionInfo.Evolutions = {
 		OnFail = "Common Egg",
 
 		Time = 15,
-		SuccessChance = 0.90,
+		SuccessChance = 0.090,
 		Cost = 300,
 
-		ProtectionProductId = 200101,
+		ProtectionProductId = 3487625216,
 		SkipProductId = 200102,
 	},
 
@@ -58,7 +58,7 @@ EggEvolutionInfo.Evolutions = {
 		SuccessChance = 0.85,
 		Cost = 900,
 
-		ProtectionProductId = 200201,
+		ProtectionProductId = 3487625467,
 		SkipProductId = 200202,
 	},
 
@@ -71,7 +71,7 @@ EggEvolutionInfo.Evolutions = {
 		SuccessChance = 0.80,
 		Cost = 2500,
 
-		ProtectionProductId = 200301,
+		ProtectionProductId = 3487626814,
 		SkipProductId = 200302,
 	},
 
@@ -84,7 +84,7 @@ EggEvolutionInfo.Evolutions = {
 		SuccessChance = 0.75,
 		Cost = 8000,
 
-		ProtectionProductId = 200401,
+		ProtectionProductId = 3487626990,
 		SkipProductId = 200402,
 	},
 
@@ -97,7 +97,7 @@ EggEvolutionInfo.Evolutions = {
 		SuccessChance = 0.70,
 		Cost = 20000,
 
-		ProtectionProductId = 200501,
+		ProtectionProductId = 3487627166,
 		SkipProductId = 200502,
 	},
 
@@ -110,7 +110,7 @@ EggEvolutionInfo.Evolutions = {
 		SuccessChance = 0.65,
 		Cost = 50000,
 
-		ProtectionProductId = 200601,
+		ProtectionProductId = 3487627392,
 		SkipProductId = 200602,
 	},
 
@@ -123,7 +123,7 @@ EggEvolutionInfo.Evolutions = {
 		SuccessChance = 0.60,
 		Cost = 120000,
 
-		ProtectionProductId = 200701,
+		ProtectionProductId = 3487627566,
 		SkipProductId = 200702,
 	},
 
@@ -136,7 +136,7 @@ EggEvolutionInfo.Evolutions = {
 		SuccessChance = 0.55,
 		Cost = 300000,
 
-		ProtectionProductId = 200801,
+		ProtectionProductId = 3487627846,
 		SkipProductId = 200802,
 	},
 
@@ -149,7 +149,7 @@ EggEvolutionInfo.Evolutions = {
 		SuccessChance = 0.50,
 		Cost = 750000,
 
-		ProtectionProductId = 200901,
+		ProtectionProductId = 3487628051,
 		SkipProductId = 200902,
 	},
 
@@ -162,7 +162,7 @@ EggEvolutionInfo.Evolutions = {
 		SuccessChance = 0.45,
 		Cost = 1500000,
 
-		ProtectionProductId = 201001,
+		ProtectionProductId = 3487628201,
 		SkipProductId = 201002,
 	},
 
@@ -175,7 +175,7 @@ EggEvolutionInfo.Evolutions = {
 		SuccessChance = 0.40,
 		Cost = 5000000,
 
-		ProtectionProductId = 201101,
+		ProtectionProductId = 3487628367,
 		SkipProductId = 201102,
 	},
 
@@ -201,7 +201,7 @@ EggEvolutionInfo.Evolutions = {
 		SuccessChance = 0.30,
 		Cost = 50000000,
 
-		ProtectionProductId = 201301,
+		ProtectionProductId = 3487628558,
 		SkipProductId = 201302,
 	},
 
@@ -214,7 +214,7 @@ EggEvolutionInfo.Evolutions = {
 		SuccessChance = 0.30,
 		Cost = 150000000,
 
-		ProtectionProductId = 201401,
+		ProtectionProductId = 3487628825,
 		SkipProductId = 201402,
 	},
 

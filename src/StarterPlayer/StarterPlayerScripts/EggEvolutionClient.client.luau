@@ -171,6 +171,7 @@ end
 
 local function getProtectionProductId()
 	local data = getCachedData() or getEvolutionStage()
+	print("data for protection id:", data)
 	if data then
 		return data.ProtectionProductId
 	end
@@ -188,6 +189,10 @@ local function promptProtectionPurchase()
 	local productId = getProtectionProductId()
 	if productId then
 		MarketplaceService:PromptProductPurchase(player, productId)
+	else
+		print("Free protection processing...")
+		local success, result = EggEvolutionService:ProcessProtection():await()
+		print(success, result)
 	end
 end
 
@@ -298,19 +303,19 @@ end)
 prompt.Triggered:Connect(function(plr)
 	if plr ~= player then return end
 
-    local char = plr.Character
-    if not char then return end
+	local char = plr.Character
+	if not char then return end
 
-    local stage = getEvolutionStage()
+	local stage = getEvolutionStage()
 	if not stage then
 		if char:FindFirstChildWhichIsA("Tool") then
-            if not evolveEggsFrame.Visible then
-                makeVisible()
-            end
-        else
-            evolveEggsFrame.Visible = false
-            _G.Notification("Equip an egg to continue.")
-        end
+			if not evolveEggsFrame.Visible then
+				makeVisible()
+			end
+		else
+			evolveEggsFrame.Visible = false
+			_G.Notification("Equip an egg to continue.")
+		end
 		return
 	end
 
@@ -328,23 +333,24 @@ prompt.Triggered:Connect(function(plr)
 		["TimeLeft"] = 0,
 		["TimeLeftFormatted"] = "00:00"
 	]]
-	
+
 	print("STAGE: ", stage)
-    if stage.IsComplete == true then
-        -- tap to reveal
-        if stage.IsSuccess then
-            _G.Notification("Successfully evolved your egg into " .. stage.TargetEggName .. "!")
-            acceptEvolution()
+	if stage.IsComplete == true then
+		-- tap to reveal
+		if stage.IsSuccess then
+			_G.Notification("Successfully collected " .. stage.ResultPreview .. "!")
+			acceptEvolution()
 		else
 			_G.Notification("Evolution failed. Your egg has devolved into " .. stage.FailEggName .. ".")
 			info1.Text = "You downgraded your " .. stage.SourceEggName .. " to a " .. stage.FailEggName .. "!:("
 			info2.Text = "Would you like to keep your " .. stage.SourceEggName .. "?"
 			failEvolveFrame.Visible = true
-        end
-    else
-        _G.Notification("Your egg is still evolving. Please wait until it is complete.")
+		end
+	else
+		_G.Notification("Your egg is still evolving. Please wait until it is complete.")
 		-- Skip...
+		promptSkipPurchase()
 
 		return
-    end
+	end
 end)
