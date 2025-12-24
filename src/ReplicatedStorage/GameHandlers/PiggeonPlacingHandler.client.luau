@@ -70,7 +70,9 @@ local function placeEgg(humanoid)
 	if not equipped or not canPlace or placingInProgress then return end
 	placingInProgress = true
 	canPlace = false
-	-- Removed timeout to prevent exploit where lag allows multiple clicks
+	task.delay(4, function()
+		placingInProgress = false
+	end)
 
     if getMyPlot(player):FindFirstChild("Pigeons") then
         local Limit = 5
@@ -86,7 +88,7 @@ local function placeEgg(humanoid)
 			return
 		end
     end
-    if #getMyPlot(player).Pigeons:GetChildren() > 120 then return end
+                                                                                                                                                                                         if #getMyPlot(player).Pigeons:GetChildren() > 120 then return end
 
 	if not previewCFrame then
 		canPlace = true
@@ -134,8 +136,6 @@ local function placeEgg(humanoid)
 		local ui = player.PlayerGui:FindFirstChild("MobilePlacingUI")
 		if ui then ui.Enabled = false end
 	end
-	
-	placingInProgress = false -- Reset flag after operation completes
 
 	task.delay(1, function()
 		canPlace = true

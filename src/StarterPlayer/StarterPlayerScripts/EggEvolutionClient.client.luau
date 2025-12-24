@@ -1,10 +1,3 @@
---[[
-	Egg Evolution Client
-	
-	This module provides basic client functions to interact with the EggEvolutionService.
-	Use these functions to build UI connections and handle evolution state.
-]]
-
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -14,17 +7,35 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Service reference (initialized after Knit starts)
+-- ui references
+local mainUI = playerGui:WaitForChild("MainUI")
+local mainFrame = mainUI:WaitForChild("Frames")
+local evolveEggsFrame = mainFrame:WaitForChild("EvolveEggs")
+local currentEggFrame = evolveEggsFrame:WaitForChild("Current")
+local successEggFrame = evolveEggsFrame:WaitForChild("Success")
+local failEggFrame = evolveEggsFrame:WaitForChild("Fail")
+local topBar = evolveEggsFrame:WaitForChild("Top")
+local closeButton = topBar:WaitForChild("Close")
+local cancelButton = evolveEggsFrame:WaitForChild("Cancel")
+local evolveButton = evolveEggsFrame:WaitForChild("Evolve")
+local background = evolveEggsFrame:WaitForChild("Background")
+local badPercentageLabel = evolveEggsFrame:WaitForChild("BadPercentage")
+local goodPercentageLabel = evolveEggsFrame:WaitForChild("GoodPercentage")
+local timeInfoLabel = evolveEggsFrame:WaitForChild("TimeInfo")
+
+-- fail evolve
+local failEvolveFrame: Frame = mainFrame:WaitForChild("FailEvolve")
+local failEvolveCancel: TextButton = failEvolveFrame:WaitForChild("Cancel")
+local failEvolveAccept: TextButton = failEvolveFrame:WaitForChild("Evolve")
+local info1: TextLabel = failEvolveFrame:WaitForChild("Info1")
+local info2: TextLabel = failEvolveFrame:WaitForChild("Info2")
+
+-- Service reference
 local EggEvolutionService = nil
 
 -- Local state
 local cachedEvolutionData = nil
 
---------------------------------------------------------------------------------
--- HELPER FUNCTIONS
---------------------------------------------------------------------------------
-
--- Format seconds as MM:SS or HH:MM:SS
 local function formatTime(seconds)
 	seconds = math.max(0, math.floor(seconds))
 	local h = math.floor(seconds / 3600)
@@ -37,21 +48,15 @@ local function formatTime(seconds)
 	end
 end
 
---------------------------------------------------------------------------------
--- BASIC CLIENT FUNCTIONS (Reusable for UI connections)
---------------------------------------------------------------------------------
-
---[[
-	Start evolution for the currently equipped egg.
-	The server auto-detects which egg is equipped.
-	
-	@return boolean success, string? errorMessage
-]]
 local function startEvolution()
 	if not EggEvolutionService then
 		return false, "Service not ready"
 	end
-	return EggEvolutionService:StartEvolution()
+	local success, result, message = EggEvolutionService:StartEvolution():await()
+	if not success then
+		return false, "Network Error"
+	end
+	return result, message
 end
 
 --[[
@@ -70,107 +75,92 @@ end
 		- ProtectionProductId (number?): DevProduct ID for protection
 		- SkipProductId (number?): DevProduct ID for skip
 ]]
+
+local function getEvolutionDetails()
+	if not EggEvolutionService then
+		return nil
+	end
+	local success, result = EggEvolutionService:GetEvolutionDetails():await()
+	if not success then
+		warn("Failed to fetch evolution details:", result)
+		return nil
+	end
+	return result
+end
+
 local function getEvolutionStage()
 	if not EggEvolutionService then
 		return nil
 	end
-	
-	local data = EggEvolutionService:GetEvolutionStage()
-	
+
+	local success, data = EggEvolutionService:GetEvolutionStage():await()
+	if not success then
+		return nil
+	end
+
 	if data then
-		-- Add formatted time for convenience
 		data.TimeLeftFormatted = formatTime(data.TimeLeft or 0)
 		cachedEvolutionData = data
 	else
 		cachedEvolutionData = nil
 	end
-	
+
 	return data
 end
 
---[[
-	Accept the completed evolution and receive the resulting egg.
-	
-	@return boolean success, string? errorMessage
-]]
 local function acceptEvolution()
 	if not EggEvolutionService then
 		return false, "Service not ready"
 	end
-	
-	local success, errorMessage = EggEvolutionService:AcceptEvolution()
-	
-	if success then
+
+	local success, result, errorMessage = EggEvolutionService:AcceptEvolution():await()
+	if not success then
+		return false, "Network Error"
+	end
+
+	if result then
 		cachedEvolutionData = nil
 	end
-	
-	return success, errorMessage
+
+	return result, errorMessage
 end
 
---[[
-	Cancel an in-progress evolution and get the original egg back.
-	Cannot cancel a completed evolution.
-	
-	@return boolean success, string? errorMessage
-]]
 local function cancelEvolution()
 	if not EggEvolutionService then
 		return false, "Service not ready"
 	end
-	
-	local success, errorMessage = EggEvolutionService:CancelEvolution()
-	
-	if success then
+
+	local success, result, errorMessage = EggEvolutionService:CancelEvolution():await()
+	if not success then
+		return false, "Network Error"
+	end
+
+	if result then
 		cachedEvolutionData = nil
 	end
-	
-	return success, errorMessage
+
+	return result, errorMessage
 end
 
---[[
-	Check if there is an active evolution (in progress or completed).
-	
-	@return boolean hasEvolution
-]]
 local function hasActiveEvolution()
 	local data = getEvolutionStage()
 	return data ~= nil
 end
 
---[[
-	Check if evolution is complete and waiting to be accepted.
-	
-	@return boolean isComplete
-]]
 local function isEvolutionComplete()
 	local data = getEvolutionStage()
 	return data ~= nil and data.IsComplete == true
 end
 
---[[
-	Check if evolution is still in progress.
-	
-	@return boolean isInProgress
-]]
 local function isEvolutionInProgress()
 	local data = getEvolutionStage()
 	return data ~= nil and data.IsComplete == false
 end
 
---[[
-	Get the cached evolution data without making a server call.
-	
-	@return table? evolutionData
-]]
 local function getCachedData()
 	return cachedEvolutionData
 end
 
---[[
-	Get the Skip DevProduct ID for the current evolution.
-	
-	@return number? productId
-]]
 local function getSkipProductId()
 	local data = getCachedData() or getEvolutionStage()
 	if data then
@@ -179,11 +169,6 @@ local function getSkipProductId()
 	return nil
 end
 
---[[
-	Get the Protection DevProduct ID for the current evolution.
-	
-	@return number? productId
-]]
 local function getProtectionProductId()
 	local data = getCachedData() or getEvolutionStage()
 	if data then
@@ -192,9 +177,6 @@ local function getProtectionProductId()
 	return nil
 end
 
---[[
-	Prompt purchase of skip timer product.
-]]
 local function promptSkipPurchase()
 	local productId = getSkipProductId()
 	if productId then
@@ -202,9 +184,6 @@ local function promptSkipPurchase()
 	end
 end
 
---[[
-	Prompt purchase of protection product.
-]]
 local function promptProtectionPurchase()
 	local productId = getProtectionProductId()
 	if productId then
@@ -212,43 +191,33 @@ local function promptProtectionPurchase()
 	end
 end
 
---------------------------------------------------------------------------------
--- EXPOSE FUNCTIONS GLOBALLY FOR UI SCRIPTS
---------------------------------------------------------------------------------
-
--- Create a global table for easy access from other scripts
 _G.EggEvolution = {
 	-- Core functions
 	StartEvolution = startEvolution,
 	GetEvolutionStage = getEvolutionStage,
+	GetEvolutionDetails = getEvolutionDetails,
 	AcceptEvolution = acceptEvolution,
 	CancelEvolution = cancelEvolution,
-	
+
 	-- State checks
 	HasActiveEvolution = hasActiveEvolution,
 	IsEvolutionComplete = isEvolutionComplete,
 	IsEvolutionInProgress = isEvolutionInProgress,
 	GetCachedData = getCachedData,
-	
+
 	-- Product helpers
 	GetSkipProductId = getSkipProductId,
 	GetProtectionProductId = getProtectionProductId,
 	PromptSkipPurchase = promptSkipPurchase,
 	PromptProtectionPurchase = promptProtectionPurchase,
-	
+
 	-- Utility
 	FormatTime = formatTime,
 }
 
---------------------------------------------------------------------------------
--- INITIALIZATION
---------------------------------------------------------------------------------
-
--- Wait for Knit to start, then get the service reference
 Knit.OnStart():andThen(function()
 	EggEvolutionService = Knit.GetService("EggEvolutionService")
-	
-	-- Check for any existing evolution on join
+
 	local existingEvolution = getEvolutionStage()
 	if existingEvolution then
 		print("[EggEvolutionClient] Found existing evolution:", existingEvolution.SourceEggName)
@@ -257,35 +226,125 @@ end):catch(function(err)
 	warn("[EggEvolutionClient] Failed to initialize:", err)
 end)
 
---------------------------------------------------------------------------------
--- UI TRIGGER (Touch detection for evolution stand)
---------------------------------------------------------------------------------
+local worldPlots = workspace:WaitForChild("Map"):WaitForChild("Plots")
 
-local touchPart = workspace:FindFirstChild("TemplateSlot") 
-	and workspace.TemplateSlot:FindFirstChild("MainStand") 
-	and workspace.TemplateSlot.MainStand:FindFirstChild("CenterFoot")
-
-if touchPart then
-	touchPart.Touched:Connect(function(hit)
-		if hit and hit.Parent and hit.Parent:FindFirstChildWhichIsA("Humanoid") then
-			local char = hit.Parent
-			local hrp = char:FindFirstChild("HumanoidRootPart")
-			local plr = Players:GetPlayerFromCharacter(char)
-			
-			if plr ~= player then return end
-			if not hrp then return end
-			
-			local evolveFrame = playerGui:FindFirstChild("MainUI") 
-				and playerGui.MainUI:FindFirstChild("Frames")
-				and playerGui.MainUI.Frames:FindFirstChild("EvolveEggs")
-			
-			if evolveFrame then
-				if (hrp.Position - touchPart.Position).Magnitude > 5 then
-					evolveFrame.Visible = false
-				else
-					evolveFrame.Visible = true
-				end
-			end
+local function getMyPlot()
+	for _, plot in ipairs(worldPlots:GetChildren()) do
+		if plot:GetAttribute("OwnerUserId") == player.UserId then
+			return plot
 		end
-	end)
+	end
+	return nil
 end
+
+local myPlot = getMyPlot()
+if not myPlot then
+	repeat task.wait(0.5) myPlot = getMyPlot() until myPlot
+end
+
+local evolutionArea = myPlot:WaitForChild("EvolutionArea")
+local prompt: ProximityPrompt = evolutionArea:WaitForChild("Display"):WaitForChild("ActionPart"):WaitForChild("ProximityPrompt")
+
+local function makeVisible()
+	local details = getEvolutionDetails()
+	if not details then
+		warn("[EggEvolutionClient] No evolution details found for equipped egg.")
+		return
+	end
+
+	evolveEggsFrame.Visible = true
+	timeInfoLabel.Text = "Evolution Time: " .. formatTime(details.Time)
+	goodPercentageLabel.Text = "Success Chance: " .. tostring(math.floor(details.SuccessChance * 100)) .. "%"
+	badPercentageLabel.Text = "Fail Chance: " .. tostring(math.floor((1 - details.SuccessChance) * 100)) .. "%"
+	successEggFrame.Title.Text = details.NextEgg
+	failEggFrame.Title.Text = details.FailEgg
+	currentEggFrame.Title.Text = details.CurrentEgg
+	evolveButton.Title.Text = "$" .. tostring(details.Cost)
+end
+
+closeButton.MouseButton1Click:Connect(function()
+	evolveEggsFrame.Visible = false
+end)
+
+cancelButton.MouseButton1Click:Connect(function()
+	evolveEggsFrame.Visible = false
+end)
+
+evolveButton.MouseButton1Click:Connect(function()
+	local result, message = startEvolution()
+	if not result then
+		warn("[EggEvolutionClient] Failed to start evolution:", message)
+		_G.Notification(message)
+		return
+	end
+	evolveEggsFrame.Visible = false
+end)
+
+failEvolveCancel.MouseButton1Click:Connect(function()
+	failEvolveFrame.Visible = false
+	local success, msg = acceptEvolution()
+	if success then
+		_G.Notification("Accepted the devolved egg.")
+	else
+		_G.Notification(msg or "Failed to accept evolution.")
+	end
+end)
+
+failEvolveAccept.MouseButton1Click:Connect(function()
+	failEvolveFrame.Visible = false
+	promptProtectionPurchase()
+end)
+
+prompt.Triggered:Connect(function(plr)
+	if plr ~= player then return end
+
+    local char = plr.Character
+    if not char then return end
+
+    local stage = getEvolutionStage()
+	if not stage then
+		if char:FindFirstChildWhichIsA("Tool") then
+            if not evolveEggsFrame.Visible then
+                makeVisible()
+            end
+        else
+            evolveEggsFrame.Visible = false
+            _G.Notification("Equip an egg to continue.")
+        end
+		return
+	end
+
+	--[[
+		["CanDevolve"] = false,
+		["FailEggName"] = "Beach Egg",
+		["IsComplete"] = true,
+		["IsSuccess"] = true,
+		["Percentage"] = 1,
+		["ProtectionProductId"] = 200501,
+		["ResultPreview"] = "Kingdom Egg",
+		["SkipProductId"] = 200502,
+		["SourceEggName"] = "Miner Egg",
+		["TargetEggName"] = "Kingdom Egg",
+		["TimeLeft"] = 0,
+		["TimeLeftFormatted"] = "00:00"
+	]]
+	
+	print("STAGE: ", stage)
+    if stage.IsComplete == true then
+        -- tap to reveal
+        if stage.IsSuccess then
+            _G.Notification("Successfully evolved your egg into " .. stage.TargetEggName .. "!")
+            acceptEvolution()
+		else
+			_G.Notification("Evolution failed. Your egg has devolved into " .. stage.FailEggName .. ".")
+			info1.Text = "You downgraded your " .. stage.SourceEggName .. " to a " .. stage.FailEggName .. "!:("
+			info2.Text = "Would you like to keep your " .. stage.SourceEggName .. "?"
+			failEvolveFrame.Visible = true
+        end
+    else
+        _G.Notification("Your egg is still evolving. Please wait until it is complete.")
+		-- Skip...
+
+		return
+    end
+end)

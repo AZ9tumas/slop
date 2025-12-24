@@ -18,7 +18,6 @@ local ToolModule = require(ReplicatedStorage.Info.ToolInfo)
 local BeakINFO = require(ReplicatedStorage.Info.NewBeaksInfo)
 local MutationInfo = require(game.ReplicatedStorage.Info.MutationsInfo)
 
-
 local CategoryLimits = require(ReplicatedStorage.Info.InventoryInfo)
 
 local function GetBeaksPerSecond(pigeonWeight, pigeonInfo)
@@ -46,10 +45,21 @@ function InventoryService:InitPlayerInventory(player, profile)
 
 	for itemType, items in pairs(savedInv) do
 
-		if itemType == "Eggs" or itemType == "Pigeons" then
+		if itemType == "Eggs" then
 			for _, data in ipairs(items) do
-
-				table.insert(Inventories[player.UserId][itemType], data)
+				table.insert(Inventories[player.UserId].Eggs, data)
+			end
+		elseif itemType == "Pigeons" then
+			for _, data in ipairs(items) do
+				-- Ensure Weight has a default value to prevent nil issues
+				if data.Weight == nil then
+					data.Weight = 5
+				end
+				-- Ensure ID exists
+				if data.ID == nil then
+					data.ID = HttpService:GenerateGUID(false)
+				end
+				table.insert(Inventories[player.UserId].Pigeons, data)
 			end
 		elseif itemType == "Tools" then
 			for toolName, count in pairs(items) do
@@ -166,11 +176,14 @@ function InventoryService:AddItem(player, itemName, itemType, options)
 			return false, "Pigeon limit reached"
 		end
 
-		-- ✅ If pigeon already exists with same ID or Name, skip to avoid duplication
-		for _, p in ipairs(inv.Pigeons) do
-			if p.ID == (options.ID or "") or (p.Name == itemName and p.Mutation == (options.Mutation or "Normal")) then
-				warn("[InventoryService] Duplicate pigeon prevented: "..itemName)
-				return false, "Already have this pigeon"
+		-- ✅ If pigeon already exists with same ID, skip to avoid duplication
+		-- FIXED: Removed name+mutation check which prevented having multiple pigeons of the same type
+		if options.ID then
+			for _, p in ipairs(inv.Pigeons) do
+				if p.ID == options.ID then
+					warn("[InventoryService] Duplicate pigeon ID prevented: "..options.ID)
+					return false, "Already have this pigeon"
+				end
 			end
 		end
 		local OldVal = PlayerUnlocked[player.UserId][itemName]
@@ -184,7 +197,7 @@ function InventoryService:AddItem(player, itemName, itemType, options)
 			Mutation = options.Mutation or "Normal",
 			Fav = options.Fav or false,
 			ID = options.ID or HttpService:GenerateGUID(false),
-			Weight = options.Weight or nil
+			Weight = options.Weight or 5
 		})
 
 

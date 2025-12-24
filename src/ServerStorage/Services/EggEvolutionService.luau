@@ -2,6 +2,7 @@ local Knit = require(game:GetService("ReplicatedStorage").Packages.Knit)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
+local eggsFolder: Folder = ReplicatedStorage:WaitForChild("Game"):WaitForChild("Eggs")
 
 local EggEvolutionInfo = require(ReplicatedStorage.Info.EggEvolutionInfo)
 
@@ -89,7 +90,74 @@ local function getSourceEggMutation(evolution)
 	return "Normal"
 end
 
+local function updatePlotDisplayValue(player, evolutionData)
+	local PlotService = Knit.GetService("PlotService")
+	local plot = PlotService:GetPlayerPlot(player)
+	if not plot then return end
+	
+	local evolutionArea = plot:FindFirstChild("EvolutionArea")
+	if not evolutionArea then return end
+	
+	local display = evolutionArea:FindFirstChild("Display")
+	if not display then return end
+	
+	local displayPart = display:FindFirstChild("DisplayPart")
+	if not displayPart then return end
+	
+	local numberValue = displayPart:FindFirstChild("Value")
+	if not numberValue then return end
+
+	local surfaceUI = displayPart:WaitForChild("SurfaceGui")
+	local mainFramePart = surfaceUI:WaitForChild("Main")
+	local partTitleInfo = mainFramePart:WaitForChild("TitleInfo")
+
+	local timeLeft = evolutionData and evolutionData.TimeLeft or 0
+	local text = "No Active Evolution"
+
+	if evolutionData and evolutionData.Status == "InProgress" then
+		text = "Evolving... "
+	elseif evolutionData and evolutionData.Status == "Completed" then
+		text = "Evolution Complete!"
+	end
+
+	partTitleInfo.Text = text
+	numberValue.Value = evolutionData and evolutionData.FinishTime or 0
+
+	local mainstand = display.Parent
+	local CenterFoot = mainstand.MainStand.CenterFoot
+
+	--[[
+	
+		Percentage = percentage,
+		TimeLeft = timeLeft,
+		IsComplete = isComplete,
+		ResultPreview = isComplete and evolution.FinalResultName or nil,
+		SourceEggName = sourceEggName,
+		TargetEggName = evolution.TargetEggName,
+		FailEggName = evolution.FailEggName,
+		ProtectionProductId = evolution.ProtectionProductId,
+		SkipProductId = evolution.SkipProductId,
+		IsSuccess = evolution.IsSuccess,
+		CanDevolve = evolution.CanDevolve
+	]]
+
+	print("EVOLUTION DATA TO DISPLAY EGG:", evolutionData)
+
+	if evolutionData == nil then
+		-- if any egg exists under mainstand then delete it
+		local egg = mainstand:FindFirstChild("Egg")
+		if egg then egg:Destroy() end
+	else
+		print("FOUND PROPER EVOLUTION DATA TO DISPLAY EGG")
+		local model: Model = eggsFolder:WaitForChild(evolutionData.SourceEggName:gsub(" Egg", "")).Egg:Clone()
+		model:PivotTo(CenterFoot.CFrame)
+		model.Parent = mainstand
+	end
+end
+
 function EggEvolutionService:_finishEvolution(player)
+	if player.Parent ~= Players then return false end
+
 	local evolution = getActiveEvolution(player)
 	if not evolution then
 		return false
@@ -121,6 +189,23 @@ function EggEvolutionService:_finishEvolution(player)
 	return true
 end
 
+function EggEvolutionService.Client:GetEvolutionDetails(player)
+	return self.Server:GetEvolutionDetails(player)
+end
+
+function EggEvolutionService:GetEvolutionDetails(player)
+	local eggData = getEquippedEgg(player)
+	if not eggData then
+		return nil
+	end
+	
+	local eggName = eggData.Name
+	local eggUUID = eggData.ID
+	local details = EggEvolutionInfo.GetEvolutionDetails(eggName)
+
+	return details
+end
+
 function EggEvolutionService.Client:StartEvolution(player)
 	return self.Server:StartEvolution(player)
 end
@@ -129,6 +214,8 @@ function EggEvolutionService:StartEvolution(player)
 	-- Check if there's already an active evolution in profile
 	local existingEvolution = getActiveEvolution(player)
 	if existingEvolution then
+		game.ReplicatedStorage.Remotes.Notification:FireClient(player, "You already have an active evolution!")
+		self:RestoreEvolution(player)
 		return false, "You already have an active evolution"
 	end
 	
@@ -213,11 +300,15 @@ function EggEvolutionService:StartEvolution(player)
 	-- Save to profile (persistent)
 	setActiveEvolution(player, evolutionData)
 	
+	-- Update plot display value
+	updatePlotDisplayValue(player, getActiveEvolution(player))
+	
 	-- Start delay thread for auto-completion
 	EvolutionDelayThreads[player] = task.delay(duration, function()
 		local currentEvolution = getActiveEvolution(player)
 		if currentEvolution and currentEvolution.SourceEggData and currentEvolution.SourceEggData.UUID == eggUUID then
 			self:_finishEvolution(player)
+			updatePlotDisplayValue(player, getActiveEvolution(player))
 		end
 	end)
 	
@@ -309,6 +400,8 @@ function EggEvolutionService:AcceptEvolution(player)
 	if Notification then
 		Notification:FireClient(player, "Evolution Accepted!")
 	end
+
+	updatePlotDisplayValue(player, nil)
 	
 	return true
 end
@@ -346,6 +439,9 @@ function EggEvolutionService:CancelEvolution(player)
 		task.cancel(EvolutionDelayThreads[player])
 		EvolutionDelayThreads[player] = nil
 	end
+	
+	-- Clear plot display
+	updatePlotDisplayValue(player, nil)
 	
 	-- Notify player
 	local Notification = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Notification")
@@ -443,27 +539,32 @@ function EggEvolutionService:GetProtectionProductId(player)
 end
 
 -- Restore evolution timer for a player (called on player join)
-function EggEvolutionService:RestoreEvolutionTimer(player)
+function EggEvolutionService:RestoreEvolution(player)
 	local evolution = getActiveEvolution(player)
+	print("restoring evolution timer for", player.Name, evolution)
 	if not evolution then
 		return
 	end
+
+	local currentTime = os.time()
+	local timeLeft = math.max(0, evolution.FinishTime - currentTime)
+
+	updatePlotDisplayValue(player, evolution)
 	
 	-- If evolution is still in progress, set up a delay thread
 	if evolution.Status == "InProgress" then
-		local currentTime = os.time()
-		local timeLeft = math.max(0, evolution.FinishTime - currentTime)
-		
 		if timeLeft > 0 then
 			-- Set up delay thread for remaining time
 			EvolutionDelayThreads[player] = task.delay(timeLeft, function()
 				local currentEvolution = getActiveEvolution(player)
 				if currentEvolution and currentEvolution.Status == "InProgress" then
 					self:_finishEvolution(player)
+					updatePlotDisplayValue(player, getActiveEvolution(player))
 				end
 			end)
 		else
 			-- Time has passed, finish immediately
+			print("Evolution time up!!")
 			self:_finishEvolution(player)
 		end
 	end
@@ -475,7 +576,7 @@ function EggEvolutionService:KnitStart()
 	-- Restore evolution timers for players who have active evolutions on join
 	DataService.PlayerProfileLoaded.Event:Connect(function(player)
 		task.defer(function()
-			self:RestoreEvolutionTimer(player)
+			self:RestoreEvolution(player)
 		end)
 	end)
 	
@@ -486,7 +587,6 @@ function EggEvolutionService:KnitStart()
 			task.cancel(EvolutionDelayThreads[player])
 			EvolutionDelayThreads[player] = nil
 		end
-		-- Note: Evolution data is persisted in profile, no need to clear it
 	end)
 end
 

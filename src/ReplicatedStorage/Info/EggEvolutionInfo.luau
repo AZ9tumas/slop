@@ -260,6 +260,7 @@ EggEvolutionInfo.Evolutions = {
 
 
 function EggEvolutionInfo.GetEvolutionDetails(currentEggName)
+	if not currentEggName then warn("Invalid egg.") end
 	local data = EggEvolutionInfo.Evolutions[currentEggName]
 
 	if not data or not data.Enabled or not data.To then

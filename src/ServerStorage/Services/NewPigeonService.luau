@@ -1038,11 +1038,18 @@ _G.getPigeonDatafromid = function(player,pigeonId)
 	local inv = Knit.GetService("InventoryService")
 
 	local uniques = inv:GetInventory(player)
+	if not uniques or not uniques.Pigeons then
+		return nil
+	end
 
 	local pigeonData
 	for i, pigeon in ipairs(uniques.Pigeons) do
 		if pigeon.ID == pigeonId then
 			pigeonData = pigeon
+			-- Ensure Weight has a default value
+			if pigeonData and pigeonData.Weight == nil then
+				pigeonData.Weight = 5
+			end
 			break
 		end
 	end
