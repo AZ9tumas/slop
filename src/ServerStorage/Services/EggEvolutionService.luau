@@ -58,24 +58,6 @@ local function getEquippedEgg(player)
 	return nil
 end
 
--- Helper: Find egg by UUID in inventory
-local function findEggByUUID(player, eggUUID)
-	local InventoryService = Knit.GetService("InventoryService")
-	local inventory = InventoryService:GetInventory(player)
-	
-	if not inventory or not inventory.Eggs then
-		return nil
-	end
-	
-	for _, egg in ipairs(inventory.Eggs) do
-		if egg.ID == eggUUID then
-			return egg
-		end
-	end
-	
-	return nil
-end
-
 -- Helper: Remove egg by UUID
 local function removeEggByUUID(player, eggUUID, eggName)
 	local InventoryService = Knit.GetService("InventoryService")
@@ -91,6 +73,22 @@ local function addEggWithMutation(player, eggName, mutation)
 	})
 end
 
+-- Helper: Get source egg name from evolution data (with backward compatibility)
+local function getSourceEggName(evolution)
+	if evolution.SourceEggData and evolution.SourceEggData.Name then
+		return evolution.SourceEggData.Name
+	end
+	return evolution.SourceEggName
+end
+
+-- Helper: Get source egg mutation from evolution data
+local function getSourceEggMutation(evolution)
+	if evolution.SourceEggData and evolution.SourceEggData.Mutation then
+		return evolution.SourceEggData.Mutation
+	end
+	return "Normal"
+end
+
 function EggEvolutionService:_finishEvolution(player)
 	local evolution = getActiveEvolution(player)
 	if not evolution then
@@ -102,7 +100,7 @@ function EggEvolutionService:_finishEvolution(player)
 	end
 	
 	-- Run probability logic using source egg name
-	local sourceEggName = evolution.SourceEggData and evolution.SourceEggData.Name or evolution.SourceEggName
+	local sourceEggName = getSourceEggName(evolution)
 	local resultEggName, isSuccess = EggEvolutionInfo.Evolve(sourceEggName)
 	
 	-- Update evolution data
@@ -198,6 +196,7 @@ function EggEvolutionService:StartEvolution(player)
 	-- Construct ActiveEvolution data (persistent)
 	local evolutionData = {
 		SourceEggData = sourceEggData,
+		SourceEggName = eggName, -- Backward compatibility field
 		TargetEggName = details.NextEgg,
 		FailEggName = details.FailEgg,
 		StartTime = startTime,
@@ -255,7 +254,7 @@ function EggEvolutionService:GetEvolutionStage(player)
 	end
 	
 	local isComplete = evolution.Status == "Completed"
-	local sourceEggName = evolution.SourceEggData and evolution.SourceEggData.Name or evolution.SourceEggName
+	local sourceEggName = getSourceEggName(evolution)
 	
 	return {
 		Percentage = percentage,
@@ -288,7 +287,7 @@ function EggEvolutionService:AcceptEvolution(player)
 	end
 	
 	-- Get Mutation from SourceEggData to preserve it
-	local mutation = evolution.SourceEggData and evolution.SourceEggData.Mutation or "Normal"
+	local mutation = getSourceEggMutation(evolution)
 	
 	-- Add the final egg to inventory with preserved Mutation
 	local success = addEggWithMutation(player, evolution.FinalResultName, mutation)
@@ -330,8 +329,8 @@ function EggEvolutionService:CancelEvolution(player)
 	end
 	
 	-- Get source egg data for Mutation preservation
-	local sourceEggName = evolution.SourceEggData and evolution.SourceEggData.Name or evolution.SourceEggName
-	local mutation = evolution.SourceEggData and evolution.SourceEggData.Mutation or "Normal"
+	local sourceEggName = getSourceEggName(evolution)
+	local mutation = getSourceEggMutation(evolution)
 	
 	-- Return the original egg with preserved Mutation
 	local success = addEggWithMutation(player, sourceEggName, mutation)
@@ -410,7 +409,7 @@ function EggEvolutionService:ProcessProtection(player)
 	end
 	
 	-- Restore original egg name from SourceEggData
-	local sourceEggName = evolution.SourceEggData and evolution.SourceEggData.Name or evolution.SourceEggName
+	local sourceEggName = getSourceEggName(evolution)
 	evolution.FinalResultName = sourceEggName
 	evolution.IsSuccess = true -- Flag as success to prevent re-purchasing protection
 	evolution.CanDevolve = false
@@ -457,7 +456,6 @@ function EggEvolutionService:RestoreEvolutionTimer(player)
 		
 		if timeLeft > 0 then
 			-- Set up delay thread for remaining time
-			local eggUUID = evolution.SourceEggData and evolution.SourceEggData.UUID
 			EvolutionDelayThreads[player] = task.delay(timeLeft, function()
 				local currentEvolution = getActiveEvolution(player)
 				if currentEvolution and currentEvolution.Status == "InProgress" then
