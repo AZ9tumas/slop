@@ -124,60 +124,68 @@ end
 
 --[[
 	Check if there is an active evolution (in progress or completed).
+	Uses cached data to avoid server calls.
 	
 	@return boolean hasEvolution
 ]]
 function EggEvolutionController:HasActiveEvolution()
-	local data = self:GetEvolutionStage()
-	return data ~= nil
+	return currentEvolutionData ~= nil
 end
 
 --[[
 	Check if evolution is complete and waiting to be accepted.
+	Uses cached data to avoid server calls.
 	
 	@return boolean isComplete
 ]]
 function EggEvolutionController:IsEvolutionComplete()
-	local data = self:GetEvolutionStage()
-	return data ~= nil and data.IsComplete == true
+	return currentEvolutionData ~= nil and currentEvolutionData.IsComplete == true
 end
 
 --[[
 	Check if evolution is still in progress.
+	Uses cached data to avoid server calls.
 	
 	@return boolean isInProgress
 ]]
 function EggEvolutionController:IsEvolutionInProgress()
-	local data = self:GetEvolutionStage()
-	return data ~= nil and data.IsComplete == false
+	return currentEvolutionData ~= nil and currentEvolutionData.IsComplete == false
 end
 
 --[[
 	Get the Skip DevProduct ID for the current evolution.
-	Used for prompting purchases.
+	Uses cached data to avoid server calls.
 	
 	@return number? productId
 ]]
 function EggEvolutionController:GetSkipProductId()
-	local data = self:GetEvolutionStage()
-	if data then
-		return data.SkipProductId
+	if currentEvolutionData then
+		return currentEvolutionData.SkipProductId
 	end
 	return nil
 end
 
 --[[
 	Get the Protection DevProduct ID for the current evolution.
-	Used for prompting purchases after a failed evolution.
+	Uses cached data to avoid server calls.
 	
 	@return number? productId
 ]]
 function EggEvolutionController:GetProtectionProductId()
-	local data = self:GetEvolutionStage()
-	if data then
-		return data.ProtectionProductId
+	if currentEvolutionData then
+		return currentEvolutionData.ProtectionProductId
 	end
 	return nil
+end
+
+--[[
+	Get the cached evolution data without making a server call.
+	Use this for frequent UI updates. Call RefreshEvolutionState() to update cache.
+	
+	@return table? evolutionData
+]]
+function EggEvolutionController:GetCachedEvolutionData()
+	return currentEvolutionData
 end
 
 --[[
@@ -220,22 +228,37 @@ function EggEvolutionController:_notifyCallbacks(data)
 end
 
 -- Internal: Poll for evolution updates
+-- Only polls actively when evolution is in progress, otherwise checks less frequently
 function EggEvolutionController:_startPolling()
 	task.spawn(function()
+		local idlePollCounter = 0
+		local IDLE_POLL_INTERVAL = 5 -- Check every 5 seconds when no active evolution
+		
 		while true do
-			task.wait(1) -- Poll every second
+			local pollInterval = 1 -- Default: poll every second when evolution active
 			
+			-- If no active evolution, poll less frequently
+			if currentEvolutionData == nil then
+				idlePollCounter = idlePollCounter + 1
+				if idlePollCounter < IDLE_POLL_INTERVAL then
+					task.wait(1)
+					continue
+				end
+				idlePollCounter = 0
+			end
+			
+			local previousData = currentEvolutionData
 			local data = self:GetEvolutionStage()
 			
 			-- Check if state changed
 			local stateChanged = false
-			if data == nil and currentEvolutionData ~= nil then
+			if data == nil and previousData ~= nil then
 				stateChanged = true
-			elseif data ~= nil and currentEvolutionData == nil then
+			elseif data ~= nil and previousData == nil then
 				stateChanged = true
-			elseif data and currentEvolutionData then
+			elseif data and previousData then
 				-- Check for completion transition
-				if data.IsComplete ~= currentEvolutionData.IsComplete then
+				if data.IsComplete ~= previousData.IsComplete then
 					stateChanged = true
 				end
 			end
@@ -243,6 +266,8 @@ function EggEvolutionController:_startPolling()
 			if stateChanged then
 				self:_notifyCallbacks(data)
 			end
+			
+			task.wait(pollInterval)
 		end
 	end)
 end
