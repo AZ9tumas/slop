@@ -1,303 +1,270 @@
-local EggEvolutionInfo = {}
-
-EggEvolutionInfo.Path = {
-	"Common Egg",
-	"Uncommon Egg",
-	"Rare Egg",
-	"Epic Egg",
-	"Beach Egg",
-	"Miner Egg",
-	"Kingdom Egg",
-	"Nature Egg",
-	"Candy Egg",
-	"Volcano Egg",
-	"Winter Egg",
-	"Pumpkin Egg",
-	"Wealth Egg",
-	"Zombie Egg",
-	"Glitched Egg",
-	"Space Egg",
-	"Secret Egg",
-	"Gravity Egg",
-}
-
-EggEvolutionInfo.Evolutions = {
-
+local Egg = {
 	["Common Egg"] = {
-		Enabled = true,
-		To = "Uncommon Egg",
-		OnFail = "Common Egg",
-
-		Time = 5,
-		SuccessChance = 0.95,
+		DisplayName = "Common Egg",
+		Rarity = "Common",
 		Cost = 100,
-
-		ProtectionProductId = nil,
-		SkipProductId = 200001,
+		HoldDuration = 0.55,
+		Pigeons = {
+			{ Name = "Pigeon", Weight = 2.6, Chance = 35 },
+			{ Name = "Baker Pigeon", Weight = 2.6, Chance = 30 },
+			{ Name = "Messenger Pigeon", Weight = 2.7, Chance = 25 },
+			{ Name = "Fisher Pigeon", Weight = 2.9, Chance = 10 },
+		},
+		HatchTime = 10,
 	},
 
 	["Uncommon Egg"] = {
-		Enabled = true,
-		To = "Rare Egg",
-		OnFail = "Common Egg",
-
-		Time = 15,
-		SuccessChance = 0.090,
-		Cost = 300,
-
-		ProtectionProductId = 3487625216,
-		SkipProductId = 200102,
+		DisplayName = "Uncommon Egg",
+		Rarity = "Uncommon",
+		Cost = 500,
+		HoldDuration = 0.55,
+		Pigeons = {
+			{ Name = "Artist Pigeon", Weight = 2.55, Chance = 45 },
+			{ Name = "Pirate Pigeon", Weight = 2.7, Chance = 30 },
+			{ Name = "Skater Pigeon", Weight = 2.8, Chance = 18 },
+			{ Name = "Gardener Pigeon", Weight = 3, Chance = 7 },
+		},
+		HatchTime = 15,
 	},
 
 	["Rare Egg"] = {
-		Enabled = true,
-		To = "Epic Egg",
-		OnFail = "Uncommon Egg",
-
-		Time = 45,
-		SuccessChance = 0.85,
-		Cost = 900,
-
-		ProtectionProductId = 3487625467,
-		SkipProductId = 200202,
+		DisplayName = "Rare Egg",
+		Rarity = "Rare",
+		Cost = 1000,
+		HoldDuration = 0.55,
+		Pigeons = {
+			{ Name = "Pharaoh Pigeon", Weight = 2.7, Chance = 40 },
+			{ Name = "Astronaut Pigeon", Weight = 2.9, Chance = 30 },
+			{ Name = "Ninja Pigeon", Weight = 3, Chance = 20 },
+			{ Name = "Samurai Pigeon", Weight = 3.1, Chance = 10 },
+		},
+		HatchTime = 25,
 	},
 
 	["Epic Egg"] = {
-		Enabled = true,
-		To = "Beach Egg",
-		OnFail = "Rare Egg",
-
-		Time = 120,
-		SuccessChance = 0.80,
-		Cost = 2500,
-
-		ProtectionProductId = 3487626814,
-		SkipProductId = 200302,
+		DisplayName = "Epic Egg",
+		Rarity = "Epic",
+		Cost = 5800,
+		HoldDuration = 0.55,
+		Pigeons = {
+			{ Name = "Gladiator Pigeon", Weight = 3.1, Chance = 50 },
+			{ Name = "Shadow Pigeon", Weight = 3.3, Chance = 35 },
+			{ Name = "Cyberpunk Pigeon", Weight = 3.5, Chance = 15 },
+		},
+		HatchTime = 50,
 	},
 
 	["Beach Egg"] = {
-		Enabled = true,
-		To = "Miner Egg",
-		OnFail = "Epic Egg",
-
-		Time = 300,
-		SuccessChance = 0.75,
-		Cost = 8000,
-
-		ProtectionProductId = 3487626990,
-		SkipProductId = 200402,
+		DisplayName = "Beach Egg",
+		Rarity = "Beach",
+		Cost = 16000,
+		HoldDuration = 0.55,
+		Pigeons = {
+			{ Name = "Surfer Pigeon", Weight = 3.1, Chance = 50 },
+			{ Name = "Lifeguard Pigeon", Weight = 3.3, Chance = 40 },
+			{ Name = "Seashell Pigeon", Weight = 3.7, Chance = 10 },
+		},
+		HatchTime = 75,
 	},
 
 	["Miner Egg"] = {
-		Enabled = true,
-		To = "Kingdom Egg",
-		OnFail = "Beach Egg",
-
-		Time = 900,
-		SuccessChance = 0.70,
-		Cost = 20000,
-
-		ProtectionProductId = 3487627166,
-		SkipProductId = 200502,
+		DisplayName = "Miner Egg",
+		Rarity = "Miner",
+		Cost = 45000,
+		HoldDuration = 0.65,
+		HatchSound = "rbxassetid://9125869495",
+		HatchVFX = game.ReplicatedStorage.Game.HatchVFX.Rocks,
+		Pigeons = {
+			{ Name = "Miner Pigeon", Weight = 3.2, Chance = 50 },
+			{ Name = "Minecart Pigeon", Weight = 3.4, Chance = 40 },
+			{ Name = "Crystal Pigeon", Weight = 3.9, Chance = 10 },
+		},
+		HatchTime = 250,
 	},
 
 	["Kingdom Egg"] = {
-		Enabled = true,
-		To = "Nature Egg",
-		OnFail = "Miner Egg",
-
-		Time = 1800,
-		SuccessChance = 0.65,
-		Cost = 50000,
-
-		ProtectionProductId = 3487627392,
-		SkipProductId = 200602,
+		DisplayName = "Kingdom Egg",
+		Rarity = "Kingdom",
+		Cost = 100000,
+		HoldDuration = 0.6,
+		HatchSound = "rbxassetid://2789429097",
+		SpawnSound = "rbxassetid://94191035780888",
+		Pigeons = {
+			{ Name = "Crown Pigeon", Weight = 3.2 * 1.1, Chance = 55 },
+			{ Name = "Knight Pigeon", Weight = 3.4 * 1.1, Chance = 40 },
+			{ Name = "Priest Pigeon", Weight = 3.9 * 1.1, Chance = 5 },
+		},
+		HatchTime = 500,
 	},
 
 	["Nature Egg"] = {
-		Enabled = true,
-		To = "Candy Egg",
-		OnFail = "Kingdom Egg",
-
-		Time = 3600,
-		SuccessChance = 0.60,
-		Cost = 120000,
-
-		ProtectionProductId = 3487627566,
-		SkipProductId = 200702,
+		DisplayName = "Nature Egg",
+		Rarity = "Nature",
+		Cost = 275000,
+		HoldDuration = 1,
+		HatchSound = "rbxassetid://105277634319381",
+		SpawnSound = "rbxassetid://122520192691431",
+		HatchVFX = game.ReplicatedStorage.Game.HatchVFX.Leaves,
+		Pigeons = {
+			{ Name = "Blossom Pigeon", Weight = 3.2 * 1.2, Chance = 50 },
+			{ Name = "Nature Pigeon", Weight = 3.4 * 1.2, Chance = 40 },
+			{ Name = "Golem Pigeon", Weight = 4.1 * 1.15, Chance = 10 },
+		},
+		HatchTime = 1500,
 	},
 
 	["Candy Egg"] = {
-		Enabled = true,
-		To = "Volcano Egg",
-		OnFail = "Nature Egg",
-
-		Time = 7200,
-		SuccessChance = 0.55,
-		Cost = 300000,
-
-		ProtectionProductId = 3487627846,
-		SkipProductId = 200802,
+		DisplayName = "Candy Egg",
+		Rarity = "Candy",
+		Cost = 525000,
+		HoldDuration = 1.5,
+		SpawnSound = "rbxassetid://108012763425202",
+		Pigeons = {
+			{ Name = "Chocolate Pigeon", Weight = 3.2 * 1.3, Chance = 50 },
+			{ Name = "Candycane Pigeon", Weight = 3.4 * 1.3, Chance = 40 },
+			{ Name = "Cake Pigeon", Weight = 4.2 * 1.2, Chance = 10 },
+		},
+		HatchTime = 1750,
 	},
 
 	["Volcano Egg"] = {
-		Enabled = true,
-		To = "Winter Egg",
-		OnFail = "Candy Egg",
-
-		Time = 14400,
-		SuccessChance = 0.50,
-		Cost = 750000,
-
-		ProtectionProductId = 3487628051,
-		SkipProductId = 200902,
+		DisplayName = "Volcano Egg",
+		Rarity = "Volcano",
+		Cost = 1385000,
+		HoldDuration = 1.5,
+		SpawnSound = "rbxassetid://136573872074259",
+		Pigeons = {
+			{ Name = "Fire Pigeon", Weight = 3.5 * 1.3, Chance = 50 },
+			{ Name = "Magma Pigeon", Weight = 3.7 * 1.3, Chance = 42 },
+			{ Name = "Volcano Pigeon", Weight = 4.3 * 1.25, Chance = 8 },
+		},
+		HatchTime = 3600,
 	},
 
 	["Winter Egg"] = {
-		Enabled = true,
-		To = "Pumpkin Egg",
-		OnFail = "Volcano Egg",
-
-		Time = 21600,
-		SuccessChance = 0.45,
-		Cost = 1500000,
-
-		ProtectionProductId = 3487628201,
-		SkipProductId = 201002,
+		DisplayName = "Winter Egg",
+		Rarity = "Winter",
+		Cost = 3580000,
+		HoldDuration = 2,
+		SpawnSound = "rbxassetid://137381545951901",
+		Pigeons = {
+			{ Name = "Snow Pigeon", Weight = 3.5 * 1.3, Chance = 50 },
+			{ Name = "Elf Pigeon", Weight = 3.75 * 1.4, Chance = 45 },
+			{ Name = "Santa Pigeon", Weight = 4.4 * 1.3, Chance = 5 },
+		},
+		HatchTime = 4500,
 	},
 
 	["Pumpkin Egg"] = {
-		Enabled = true,
-		To = "Wealth Egg",
-		OnFail = "Winter Egg",
-
-		Time = 28800,
-		SuccessChance = 0.40,
-		Cost = 5000000,
-
-		ProtectionProductId = 3487628367,
-		SkipProductId = 201102,
+		DisplayName = "Pumpkin Egg",
+		Rarity = "Pumpkin",
+		Cost = 25580000,
+		HoldDuration = 2,
+		SpawnSound = "rbxassetid://135427058683314",
+		Pigeons = {
+			{ Name = "Pumpkin Pigeon", Weight = 3.4 * 1.25, Chance = 50 },
+			{ Name = "Ghost Pigeon", Weight = 3.9 * 1.35, Chance = 40 },
+			{ Name = "Reaper Pigeon", Weight = 4.6 * 1.35, Chance = 10 },
+		},
+		HatchTime = 6500,
 	},
 
 	["Wealth Egg"] = {
-		Enabled = true,
-		To = "Zombie Egg",
-		OnFail = "Pumpkin Egg",
-
-		Time = 36000,
-		SuccessChance = 0.35,
-		Cost = 20000000,
-
-		ProtectionProductId = 201201,
-		SkipProductId = 201202,
+		DisplayName = "Wealth Egg",
+		Rarity = "Wealth",
+		Cost = 0,
+		HoldDuration = 2,
+		Pigeons = {
+			{ Name = "Rich Pigeon", Weight = 4.2 * 1.25, Chance = 50 },
+			{ Name = "Money Pigeon", Weight = 5.5 * 1.35, Chance = 42 },
+			{ Name = "Wealthy Pigeon", Weight = 8.2 * 1.35, Chance = 8 },
+		},
+		HatchTime = 10800,
 	},
 
 	["Zombie Egg"] = {
-		Enabled = true,
-		To = "Glitched Egg",
-		OnFail = "Wealth Egg",
-
-		Time = 43200,
-		SuccessChance = 0.30,
-		Cost = 50000000,
-
-		ProtectionProductId = 3487628558,
-		SkipProductId = 201302,
+		DisplayName = "Zombie Egg",
+		Rarity = "Zombie",
+		Cost = 125500000,
+		HoldDuration = 2.5,
+		HatchSound = "rbxassetid://135076986499326",
+		HatchVFX = game.ReplicatedStorage.Game.HatchVFX.Bones,
+		SpawnSound = "rbxassetid://100951219085114",
+		Pigeons = {
+			{ Name = "Zombie Pigeon", Weight = 5.1 * 1.2, Chance = 60 },
+			{ Name = "Skeleton Pigeon", Weight = 6.8* 1.2, Chance = 30 },
+			{ Name = "Frank Pigeon", Weight = 8.0* 1.2, Chance = 10 },
+		},
+		HatchTime = 18000,
 	},
 
 	["Glitched Egg"] = {
-		Enabled = true,
-		To = "Space Egg",
-		OnFail = "Zombie Egg",
-
-		Time = 54000,
-		SuccessChance = 0.30,
-		Cost = 150000000,
-
-		ProtectionProductId = 3487628825,
-		SkipProductId = 201402,
-	},
-
+		DisplayName = "Glitched Egg",
+		Rarity = "Glitched",
+		Cost = 870000000,
+		HoldDuration = 2.5,
+		SpawnSound = "rbxassetid://136395162227348",
+		Pigeons = {
+			{ Name = "Glitched Pigeon", Weight = 5.5* 1.2, Chance = 60 },
+			{ Name = "Hacked Pigeon", Weight = 7.5* 1.2, Chance = 40 },
+		},
+		HatchTime = 19000,
+    },
+    ["Galaxy Egg"] = {
+        DisplayName = "Galaxy Egg",
+        Rarity = "Galaxy",
+        Cost = 0,
+        HoldDuration = 4,
+        SpawnSound = "",
+        Pigeons = {
+            { Name = "Nova Pigeon", Weight = 14.3, Chance = 50 },
+            { Name = "Gravity Pigeon", Weight = 19.0, Chance = 30 },
+            { Name = "Cosmic Pigeon", Weight = 24.5, Chance = 15 },
+            { Name = "Voidtrix Pigeon", Weight = 25.5, Chance = 5 },
+        },
+        HatchTime = 10000,
+    },
 	["Space Egg"] = {
-		Enabled = false,
-		To = "Secret Egg",
-		OnFail = "Glitched Egg",
-
-		Time = 72000,
-		SuccessChance = 0.30,
-		Cost = 500000000,
-
-		ProtectionProductId = 201501,
-		SkipProductId = 201502,
+		DisplayName = "Space Egg",
+		Rarity = "Space",
+		Cost = 4750000000,
+		HoldDuration = 2.5,
+		SpawnSound = "rbxassetid://108085825910426",
+		Pigeons = {
+			{ Name = "Earth Pigeon", Weight = 5.4* 1.15, Chance = 50 },
+			{ Name = "Star Pigeon", Weight = 7.0* 1.15, Chance = 43 },
+			{ Name = "Space Pigeon", Weight = 9.6* 1.15, Chance = 7 },
+		},
+		HatchTime = 19000,
 	},
 
 	["Secret Egg"] = {
-		Enabled = false,          -- 🔒 disabled by default
-		To = "Gravity Egg",
-		OnFail = "Space Egg",
-
-		Time = 86400,
-		SuccessChance = 0.25,
-		Cost = 1000000000,
-
-		ProtectionProductId = 201601,
-		SkipProductId = 201602,
+		DisplayName = "Secret Egg",
+		Rarity = "Secret",
+		Cost = 19250000000,
+		HoldDuration = 3.5,
+		SpawnSound = "rbxassetid://129833815349802",
+		Pigeons = {
+			{ Name = "Cyborg Pigeon", Weight = 14.4, Chance = 50 },
+			{ Name = "Alien Pigeon", Weight = 20.0, Chance = 40 },
+			{ Name = "Triple Pigeon", Weight = 24.8, Chance = 10 },
+		},
+		HatchTime = 23800,
 	},
-
-	["Gravity Egg"] = {
-		Enabled = false,          -- 🔒 terminal / event-only
-		To = nil,
-		OnFail = "Secret Egg",
-
-		Time = 0,
-		SuccessChance = 1,
-		Cost = 0,
-
-		ProtectionProductId = nil,
-		SkipProductId = nil,
-	},
+    ["Creature Egg"] = {
+        DisplayName = "Creature Egg",
+        Rarity = "Creature",
+        Cost = 100000000000,
+        HoldDuration = 4,
+        SpawnSound = "rbxassetid://133315066890208",
+        Pigeons = {
+            { Name = "Unicorn Pigeon", Weight = 15.4, Chance = 50 },
+            { Name = "Phoenix Pigeon", Weight = 23.5, Chance = 40 },
+            { Name = "Dragon Pigeon", Weight = 28.9, Chance = 10 },
+        },
+        HatchTime = 28800,
+    },
+	
 }
 
-
-function EggEvolutionInfo.GetEvolutionDetails(currentEggName)
-	if not currentEggName then warn("Invalid egg.") end
-	local data = EggEvolutionInfo.Evolutions[currentEggName]
-
-	if not data or not data.Enabled or not data.To then
-		return nil
-	end
-
-	return {
-		CurrentEgg = currentEggName,
-		NextEgg = data.To,
-		FailEgg = data.OnFail,
-
-		Cost = data.Cost,
-		Time = data.Time,
-
-		SuccessChance = data.SuccessChance,
-		FailChance = 1 - data.SuccessChance,
-
-		ProtectionProductId = data.ProtectionProductId,
-		SkipProductId = data.SkipProductId
-	}
-end
-
-function EggEvolutionInfo.Evolve(currentEggName)
-	local details = EggEvolutionInfo.GetEvolutionDetails(currentEggName)
-
-	if not details then
-		warn("Cannot evolve egg:", currentEggName)
-		return currentEggName, false
-	end
-
-	local roll = math.random() -- [0, 1)
-
-	if roll <= details.SuccessChance then
-		return details.NextEgg, true
-	else
-		return details.FailEgg, false
-	end
-end
-
-return EggEvolutionInfo
+return Egg

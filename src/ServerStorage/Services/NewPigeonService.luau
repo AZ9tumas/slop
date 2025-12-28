@@ -97,7 +97,7 @@ local function GetHighestBaseRate(userId)
         -- Only check "Standard" pigeons (those without RelativeMultiplier)
         if info and not info.RelativeMultiplier then
             local rate = Beaks:GetBeaksPerSecond(pigeon.Weight, info)
-            -- Apply mutations if necessary
+            -- Apply mutations (of standard pigeons only)
             local mutationMult = computeMutationMultiplier(ensureMutationList(pigeon.Mutation))
             rate = rate * mutationMult
             
@@ -110,6 +110,20 @@ local function GetHighestBaseRate(userId)
 	print("Highest rate right now: ", maxRate)
     
     return maxRate
+end
+
+local function calculatePigeonRate(userId, weight, info, mutation, applyMutationsToExclusive)
+	local refRate = (info and info.RelativeMultiplier) and GetHighestBaseRate(userId) or 0
+	local rate = Beaks:GetBeaksPerSecond(weight, info, refRate)
+	
+	local mutationList = ensureMutationList(mutation)
+	local mutationMult = computeMutationMultiplier(mutationList)
+	
+	if refRate == 0 or applyMutationsToExclusive then
+		rate = rate * mutationMult
+	end
+	
+	return refRate, rate
 end
 
 local function playIdleAnimation(pigeonModel)
@@ -405,9 +419,7 @@ local function sendFullUpdate(player)
 	for _, pigeon in pairs(userPigeons) do
 		local info = PigeonInfo[pigeon.Name]
 		if info then
-			local refrate = info.RelativeMultiplier and GetHighestBaseRate(player.UserId) or 0
-			local rate = Beaks:GetBeaksPerSecond(pigeon.Weight, info, refrate)
-			rate = rate * computeMutationMultiplier(ensureMutationList(pigeon.Mutation))
+			local refrate, rate = calculatePigeonRate(player.UserId, pigeon.Weight, info, pigeon.Mutation)
 			print("L411 Base Rate:", rate)
 
 			table.insert(pigeonsForClient, {
@@ -559,9 +571,7 @@ function PigeonService:RewardPigeon(player, egg)
 		Board = board
 	}
 	
-    local refRate = info.RelativeMultiplier and GetHighestBaseRate(player.UserId) or 0
-	local rate = Beaks:GetBeaksPerSecond(Pigeons[player.UserId][egg.ID].Weight, info, refRate)
-	rate = rate * computeMutationMultiplier(ensureMutationList(Pigeons[player.UserId][egg.ID].Mutation))
+	local refRate, rate = calculatePigeonRate(player.UserId, rolledWeight, info, mutation)
 	print("L565", rate, pigeonName)
 
 	local CalculatedRate = rate
@@ -972,13 +982,12 @@ function PigeonService:PlacePigeon(player, pigeonData, position, relative)
 	if next(filtered) then
 		mutationText = " (" .. table.concat(filtered, ", ") .. ")"
 	end
-    local refRate = info.RelativeMultiplier and GetHighestBaseRate(player.UserId) or 0
-	local rate = Beaks:GetBeaksPerSecond(pigeonData.Weight, info, refRate)
+
+	local refrate, rate = calculatePigeonRate(player.UserId, pigeonData.Weight, info, pigeonData.Mutation)
+	local mutationList = ensureMutationList(pigeonData.Mutation)
+	--rate = rate * computeMutationMultiplier(mutationList)
 	print("L977 Base Rate:", rate)
 	board.PigeonName.Text = pigeonData.Name .. " [" .. (pigeonData.Weight or "?") .. "Kg]" .. mutationText
-
-	local mutationList = ensureMutationList(pigeonData.Mutation)
-	rate = rate * computeMutationMultiplier(mutationList)
 	board.AmountPerSecond.Text = FormatWithCommas(rate or 0) or 0 --string.format("%.1f $/s", rate or 0)
 
 	board.SavedMoney.Amount.Text = player.Name .. "'s Pigeon"
@@ -1287,12 +1296,8 @@ function PigeonService:LoadPigeons(player, profile)
 		
 		local earned = pigeonData.EarnedBeaks or 0
 		if cycles > 0 and info then
-            local refRate = info.RelativeMultiplier and GetHighestBaseRate(player.UserId) or 0
-			local rate = Beaks:GetBeaksPerSecond(pigeonData.Weight, info, refRate)
+			local refRate, rate = calculatePigeonRate(player.UserId, pigeonData.Weight, info, pigeonData.Mutation)
 			print("L1285 Base Rate:", rate)
-			if pigeonData.Mutation then
-				rate = rate * (MutationInfo.Multipliers[pigeonData.Mutation] or 1)
-			end
 			local perCycle = rate * OfflineCollection.Cycle * OfflineCollection.Scaling
 			local totalGain = perCycle * cycles
 			earned = (earned or 0) + totalGain
@@ -1313,10 +1318,7 @@ function PigeonService:LoadPigeons(player, profile)
 		end
 		board.PigeonName.Text = pigeonData.Name.." ["..(pigeonData.Weight or "?").."Kg]"..mutationText
 		
-		local mutationList = ensureMutationList(pigeonData.Mutation)
-		local refrate = info.RelativeMultiplier and GetHighestBaseRate(player.UserId) or 0
-		local rate = Beaks:GetBeaksPerSecond(pigeonData.Weight, info, refrate)
-		rate = rate * computeMutationMultiplier(mutationList)
+		local refrate, rate = calculatePigeonRate(player.UserId, pigeonData.Weight, info, pigeonData.Mutation)
 		print("L1313 Base Rate:", rate)
 		board.AmountPerSecond.Text = FormatWithCommas(rate or 0) or 0 --string.format("%.1f $/s", rate or 0)
 
@@ -1370,9 +1372,7 @@ function PigeonService:SetMutation(pigeonid, mutation)
 					addMutationVisual(pd.Model, pd.Mutation)
 					
 					local info = PigeonInfo[pd.Name]
-					local refRate = info.RelativeMultiplier and GetHighestBaseRate(userId) or 0
-					local rate = Beaks:GetBeaksPerSecond(pd.Weight, info, refRate)
-					rate = rate * computeMutationMultiplier(pd.Mutation)
+					local refRate, rate = calculatePigeonRate(userId, pd.Weight, info, pd.Mutation)
 					print("L1369 Base Rate:", rate)
 					local board = pd.Model:FindFirstChild("PigeonBillboard", true)
 					if board then
@@ -1491,10 +1491,7 @@ function PigeonService:KnitStart()
             if delta > 0 then
                 local info = PigeonInfo[pigeon.Name]
                 if info then
-					local refrate = info.RelativeMultiplier and GetHighestBaseRate(userId) or 0
-                    local rate = Beaks:GetBeaksPerSecond(pigeon.Weight, info, refrate)
-                    local mutationList = ensureMutationList(pigeon.Mutation)
-                    rate = rate * computeMutationMultiplier(mutationList)
+					local refrate, rate = calculatePigeonRate(userId, pigeon.Weight, info, pigeon.Mutation)
 					print("L1491 Base Rate:", rate)
                     
                     local gain = rate * delta

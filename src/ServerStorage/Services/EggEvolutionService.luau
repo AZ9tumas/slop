@@ -115,7 +115,7 @@ local function updatePlotDisplayValue(player, evolutionData)
 	local text = "No Active Evolution"
 
 	if evolutionData and evolutionData.Status == "InProgress" then
-		text = "Evolving ..."
+		text = "Time Left:"
 	elseif evolutionData and evolutionData.Status == "Completed" then
 		text = "Evolution Complete!"
 	end
@@ -144,18 +144,74 @@ local function updatePlotDisplayValue(player, evolutionData)
 
 	print("EVOLUTION DATA TO DISPLAY EGG:", evolutionData)
 
-	if evolutionData == nil then
-		-- if any egg exists under evolutionArea then delete it
-		for _, v in pairs(evolutionArea:GetChildren()) do
-			if v.Name == "Egg" then
-				v:Destroy()
-			end
+	-- Always clear existing eggs first
+	for _, v in pairs(evolutionArea:GetChildren()) do
+		if v.Name == "Egg" then
+			v:Destroy()
 		end
-	else
+	end
+
+	if evolutionData then
 		print("FOUND PROPER EVOLUTION DATA TO DISPLAY EGG")
-		local model: Model = eggsFolder:WaitForChild(evolutionData.SourceEggName:gsub(" Egg", "")).Egg:Clone()
-		model:PivotTo(CenterFoot.CFrame)
-		model.Parent = evolutionArea
+
+		local eggNameToDisplay = evolutionData.SourceEggName
+		if evolutionData.Status == "Completed" and evolutionData.FinalResultName then
+			eggNameToDisplay = evolutionData.FinalResultName
+		end
+
+		-- Handle potential nil or missing models gracefully
+		local folderName = eggNameToDisplay:gsub(" Egg", "")
+		local eggFolder = eggsFolder:FindFirstChild(folderName)
+
+		if eggFolder and eggFolder:FindFirstChild("Egg") then
+			local model: Model = eggFolder.Egg:Clone()
+			
+			-- 25/12/25:
+			-- Tag it with the permanent black and white thing, which is read by client for evolutions
+			-- Remove all the billboards
+			for _, d in pairs(model:GetDescendants()) do
+				if d:IsA("BillboardGui") then
+					d:Destroy()
+				end
+			end
+			game:GetService("CollectionService"):AddTag(model, "Evolving")
+
+			-- Raycast to find the surface
+			local rayOrigin = CenterFoot.Position + Vector3.new(0, 5, 0)
+			local rayDirection = Vector3.new(0, -10, 0)
+			local params = RaycastParams.new()
+			params.FilterDescendantsInstances = {model}
+			params.FilterType = Enum.RaycastFilterType.Exclude
+
+			local result = workspace:Raycast(rayOrigin, rayDirection, params)
+
+			if result then
+				local _, size = model:GetBoundingBox()
+				-- Place model on top of the surface
+				-- We want the bottom of the model to be at result.Position
+				-- We'll use the CenterFoot's rotation
+				local targetCFrame = CFrame.new(result.Position + Vector3.new(0, size.Y / 2, 0)) * CenterFoot.CFrame.Rotation
+
+				model:PivotTo(targetCFrame)
+
+				-- Correction: Ensure the bottom is exactly on the surface
+				local newCF, newSize = model:GetBoundingBox()
+				local bottomY = newCF.Position.Y - (newSize.Y / 2)
+				local diff = result.Position.Y - bottomY
+
+				if math.abs(diff) > 0.001 then
+					model:TranslateBy(Vector3.new(0, diff, 0))
+				end
+			else
+				-- Fallback
+				model:PivotTo(CenterFoot.CFrame)
+			end
+
+			model.Name = "Egg" -- Ensure name is consistent for cleanup
+			model.Parent = evolutionArea
+		else
+			warn("Egg model not found for:", eggNameToDisplay, "Folder:", folderName)
+		end
 	end
 end
 
@@ -183,6 +239,9 @@ function EggEvolutionService:_finishEvolution(player)
 
 	-- Save back to profile
 	setActiveEvolution(player, evolution)
+
+	-- Update plot display
+	updatePlotDisplayValue(player, evolution)
 
 	-- Notify player
 	local Notification = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Notification")
@@ -239,7 +298,7 @@ function EggEvolutionService:StartEvolution(player)
 	-- Get evolution details
 	local details = EggEvolutionInfo.GetEvolutionDetails(eggName)
 	if not details then
-		return false, "This egg cannot be evolved"
+		return false, "Maxed Out"
 	end
 
 	-- Get player profile
@@ -402,7 +461,8 @@ function EggEvolutionService:AcceptEvolution(player)
 	-- Notify player
 	local Notification = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Notification")
 	if Notification then
-		Notification:FireClient(player, "Evolution Accepted!")
+        Notification:FireClient(player, "Evolution Accepted!")
+        game.ReplicatedStorage.Remotes.Confetti:FireClient(player)
 	end
 
 	updatePlotDisplayValue(player, nil)
@@ -483,8 +543,10 @@ function EggEvolutionService:ProcessSkip(player)
 	-- Notify player
 	local Notification = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Notification")
 	if Notification then
-		Notification:FireClient(player, "Evolution timer skipped!")
+		--Notification:FireClient(player, "Evolution timer skipped!")
 	end
+
+	updatePlotDisplayValue(player, getActiveEvolution(player))
 
 	return true
 end
@@ -527,6 +589,9 @@ function EggEvolutionService:ProcessProtection(player)
 
 	-- Save updated evolution data
 	setActiveEvolution(player, evolution)
+
+	-- Update plot display
+	updatePlotDisplayValue(player, evolution)
 
 	-- Notify player
 	local Notification = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Notification")

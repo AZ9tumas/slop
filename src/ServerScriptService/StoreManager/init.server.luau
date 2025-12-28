@@ -137,9 +137,9 @@ local function GiveVolcanoPack(player)
 end
 
 local function GiveFlyingCarpet(player:Player)
-    local profile = Knit.GetService("DataService"):GetProfile(player)
-    if not profile then return end
-    GiveItem(player, "Flying Carpet")
+	local profile = Knit.GetService("DataService"):GetProfile(player)
+	if not profile then return end
+	GiveItem(player, "Flying Carpet")
 end
 
 local function Givex2Beaks(player)
@@ -171,13 +171,13 @@ end
 
 local productFunctions = {
 	["SpawnFirst"] = function(player,rarity)
-		
+
 		Knit.GetService("EggSpawnerService"):ExternalSpawn(rarity)
 		game.ReplicatedStorage.Remotes.Notification:FireClient(player,"Bought "..rarity.." Egg Spawn")
 		_G.sendGlobalMessage("[PURCHASE]"..player.Name.." Bought "..rarity.." Egg Spawn")
 	end,
 	["SpawnSecond"] = function(player,rarity)
-		
+
 		Knit.GetService("EggSpawnerService"):ExternalSpawn(rarity)
 		game.ReplicatedStorage.Remotes.Notification:FireClient(player,"Bought "..rarity.." Egg Spawn")
 		_G.sendGlobalMessage("[PURCHASE]"..player.Name.." Bought "..rarity.." Egg Spawn")
@@ -216,7 +216,7 @@ local productFunctions = {
 		_G.sendGlobalMessage("[PURCHASE]"..player.Name.." Bought "..earned.." BEAKS")
 
 	end,
-	
+
 }
 local function SkipEggHatch(player, eggId)
 	local userId = player.UserId
@@ -249,7 +249,7 @@ local function SkipAllTimer(player, eggId)
 	local eggs = Knit.GetService("EggService"):ReturnEggs(player.UserId)
 
 	if not eggs then return end
-	
+
 	game.ReplicatedStorage.Remotes.Notification:FireClient(player,"Skipped All Egg Timers!")
 
 	for i, eggData in ipairs(eggs) do
@@ -276,7 +276,7 @@ game.ReplicatedStorage.Remotes:WaitForChild("StealRemote").OnServerEvent:Connect
 end)
 MarketplaceService.ProcessReceipt = function(receiptInfo)
 	local productId = receiptInfo.ProductId
-	
+
 	local player = game.Players:GetPlayerByUserId(receiptInfo.PlayerId)
 	if not player then return Enum.ProductPurchaseDecision.NotProcessedYet end
 
@@ -284,6 +284,22 @@ MarketplaceService.ProcessReceipt = function(receiptInfo)
 		GiveGravityEgg(player)
 		game.ReplicatedStorage.Remotes.Notification:FireClient(player,"Bought Gravity Egg")
 		_G.sendGlobalMessage(player.Name.." Bought Gravity Egg for 2000 robux!")
+	end
+	
+	if receiptInfo.ProductId == 3488522294 then
+		for i = 1, 10 do 
+			GiveGravityEgg(player)
+		end
+		game.ReplicatedStorage.Remotes.Notification:FireClient(player,"Bought x10 Gravity Egg")
+		_G.sendGlobalMessage(player.Name.." Bought x10 Gravity Egg for 9999 robux!")
+	end
+	
+	if receiptInfo.ProductId == 3488522171 then
+		for i = 1, 4 do 
+			GiveGravityEgg(player)
+		end
+		game.ReplicatedStorage.Remotes.Notification:FireClient(player,"Bought x4 Gravity Egg")
+		_G.sendGlobalMessage(player.Name.." Bought x4 Gravity Egg for 3999 robux!")
 	end
 
 	if receiptInfo.ProductId == SKIP_PRODUCT_ID then
@@ -293,7 +309,7 @@ MarketplaceService.ProcessReceipt = function(receiptInfo)
 			LastEggSkipRequest[player.UserId] = nil
 		end
 	end
-	
+
 	if receiptInfo.ProductId == SKIP_ALL_PRODUCT_ID then
 		local fade = script.WhiteFade:Clone()
 		fade.Parent = player.Character
@@ -301,29 +317,29 @@ MarketplaceService.ProcessReceipt = function(receiptInfo)
 		wait(1.9)
 		SkipAllTimer(player)
 	end
-	
+
 	if receiptInfo.ProductId == 3436245434 then
 		if player then
 			print("Boughtssss")
 			local profile = Knit.GetService("DataService"):GetProfile(player)
 			GiveItem(player, "Volcanic Spray")
 		end
-    end
-    
-    if receiptInfo.ProductId == 3482689984 then--OPEGG
-        if player then
-            print("Boughtssss")
-            local profile = Knit.GetService("DataService"):GetProfile(player)
-            local InventoryService = Knit.GetService("InventoryService")
-            local space = InventoryService:AddItem(player, "Nature Egg", "Egg", {
-                ID = game:GetService("HttpService"):GenerateGUID(false),
-            })
-            profile.Data.BoughtOPEgg = true
-            player.PlayerGui.MainUI.Products.NatureProduct.Visible = false
-            ReplicatedStorage.Remotes.Notification:FireClient(player, "You got a nature egg!")
-        end
-    end
-	
+	end
+
+	if receiptInfo.ProductId == 3482689984 then--OPEGG
+		if player then
+			print("Boughtssss")
+			local profile = Knit.GetService("DataService"):GetProfile(player)
+			local InventoryService = Knit.GetService("InventoryService")
+			local space = InventoryService:AddItem(player, "Nature Egg", "Egg", {
+				ID = game:GetService("HttpService"):GenerateGUID(false),
+			})
+			profile.Data.BoughtOPEgg = true
+			player.PlayerGui.MainUI.Products.NatureProduct.Visible = false
+			ReplicatedStorage.Remotes.Notification:FireClient(player, "You got a nature egg!")
+		end
+	end
+
 	if receiptInfo.ProductId == 3436245965 then
 		if player then
 			print("Boughtssss")
@@ -331,7 +347,7 @@ MarketplaceService.ProcessReceipt = function(receiptInfo)
 			GiveItem(player, "Shock Spray")
 		end
 	end
-	
+
 	if receiptInfo.ProductId == 3436247816 then
 		if player then
 			print("Boughtssss")
@@ -339,7 +355,7 @@ MarketplaceService.ProcessReceipt = function(receiptInfo)
 			GiveItem(player, "Luck Spray")
 		end
 	end
-	
+
 	if receiptInfo.ProductId == 3436247492 then
 		if player then
 			print("Boughtssss")
@@ -347,7 +363,7 @@ MarketplaceService.ProcessReceipt = function(receiptInfo)
 			GiveItem(player, "Size Spray")
 		end
 	end
-	
+
 	if player then
 		for multiplier, id in pairs(PRODUCT_IDS) do
 			if id == productId then
@@ -361,10 +377,10 @@ MarketplaceService.ProcessReceipt = function(receiptInfo)
 					productFunctions[i](player,v.Arg)
 				end
 			end)
-			
+
 		end
 	end
-	
+
 	if receiptInfo.ProductId == STEAL_PRODUCT_ID then
 		local PigeonService = Knit.GetService("PigeonService")
 		if player then
@@ -418,23 +434,23 @@ MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, gameP
 		GiveVolcanoPack(player)
 		game.ReplicatedStorage.Remotes.Notification:FireClient(player,"Bought Volcano Pack")
 		_G.sendGlobalMessage(player.Name.." Bought Volcano Pack for 59 robux!")
-    end
-    if wasPurchased and gamePassId == 1635591128 then--FLYING CARPET
-        GiveFlyingCarpet(player)
-        game.ReplicatedStorage.Remotes.Notification:FireClient(player,"Bought Flying Carpet")
-        _G.sendGlobalMessage(player.Name.." Bought Flying Carpet for 299 robux!")
-    end
+	end
+	if wasPurchased and gamePassId == 1635591128 then--FLYING CARPET
+		GiveFlyingCarpet(player)
+		game.ReplicatedStorage.Remotes.Notification:FireClient(player,"Bought Flying Carpet")
+		_G.sendGlobalMessage(player.Name.." Bought Flying Carpet for 299 robux!")
+	end
 end)
 
 game.Players.PlayerAdded:Connect(function(player)
 	-- Send current luck info to the joining player
-    LuckEvent:FireClient(player, ServerLuck.Multiplier, ServerLuck.Duration)
-    task.delay(10, function()
-        local profile = Knit.GetService("DataService"):GetProfile(player)
-        if profile.Data.BoughtOPEgg == true then
-            player.PlayerGui.MainUI.Products.NatureProduct.Visible = false
-        end
-    end)
+	LuckEvent:FireClient(player, ServerLuck.Multiplier, ServerLuck.Duration)
+	task.delay(10, function()
+		local profile = Knit.GetService("DataService"):GetProfile(player)
+		if profile.Data.BoughtOPEgg == true then
+			player.PlayerGui.MainUI.Products.NatureProduct.Visible = false
+		end
+	end)
 end)
 
 local MessagesChat = {

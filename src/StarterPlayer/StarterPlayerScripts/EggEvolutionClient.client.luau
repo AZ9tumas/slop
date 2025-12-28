@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local MarketplaceService = game:GetService("MarketplaceService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
+local IconInfo = require(ReplicatedStorage.Info.IconInfo)
 
 -- Player references
 local player = Players.LocalPlayer
@@ -250,21 +251,79 @@ end
 local evolutionArea = myPlot:WaitForChild("EvolutionArea")
 local prompt: ProximityPrompt = evolutionArea:WaitForChild("Display"):WaitForChild("ActionPart"):WaitForChild("ProximityPrompt")
 
+local function updatePromptText()
+	local stage = getEvolutionStage()
+
+	if not stage then
+		local char = player.Character
+		local tool = char and char:FindFirstChildWhichIsA("Tool")
+
+		if tool then
+			prompt.ActionText = "Evolve Egg"
+			prompt.ObjectText = tool.Name
+		else
+			prompt.ActionText = "Equip Egg"
+			prompt.ObjectText = "Evolution Machine"
+		end
+	else
+		if stage.IsComplete then
+			prompt.ActionText = "Get Result"
+			prompt.ObjectText = "Evolution Complete"
+		else
+			prompt.ActionText = "Skip"
+			prompt.ObjectText = "Evolving..."
+		end
+	end
+end
+
+local isPromptShown = false
+prompt.PromptShown:Connect(function()
+	isPromptShown = true
+	while isPromptShown do
+		updatePromptText()
+		task.wait(1)
+	end
+end)
+
+prompt.PromptHidden:Connect(function()
+	isPromptShown = false
+end)
+
+function FormatWithCommas(number)
+    if type(number) ~= "number" then
+        warn("FormatWithCommas expects a number, got", type(number))
+        return tostring(number)
+    end
+
+    local formatted = tostring(math.floor(number))
+    local k
+
+    while true do
+        formatted, k = string.gsub(formatted, "^(-?%d+)(%d%d%d)", "%1,%2")
+        if k == 0 then break end
+    end
+
+    return formatted
+end
+
 local function makeVisible()
 	local details = getEvolutionDetails()
 	if not details then
-		warn("[EggEvolutionClient] No evolution details found for equipped egg.")
+		_G.Notification("Maxed Out")
 		return
 	end
 
 	evolveEggsFrame.Visible = true
 	timeInfoLabel.Text = "Evolution Time: " .. formatTime(details.Time)
-	goodPercentageLabel.Text = "Success Chance: " .. tostring(math.floor(details.SuccessChance * 100)) .. "%"
-	badPercentageLabel.Text = "Fail Chance: " .. tostring(math.floor((1 - details.SuccessChance) * 100)) .. "%"
+	goodPercentageLabel.Text = --[["Success Chance: " .. ]]tostring(math.floor(details.SuccessChance * 100)) .. "%"
+	badPercentageLabel.Text = --[["Fail Chance: " .. ]]tostring(math.floor((1 - details.SuccessChance) * 100)) .. "%"
 	successEggFrame.Title.Text = details.NextEgg
 	failEggFrame.Title.Text = details.FailEgg
-	currentEggFrame.Title.Text = details.CurrentEgg
-	evolveButton.Title.Text = "$" .. tostring(details.Cost)
+    currentEggFrame.Title.Text = details.CurrentEgg
+    currentEggFrame.Icon.Image = IconInfo[details.CurrentEgg]
+    evolveButton.Title.Text = "$" .. FormatWithCommas(details.Cost)
+    successEggFrame.Icon.Image = IconInfo[details.NextEgg]
+    failEggFrame.Icon.Image = IconInfo[details.FailEgg]
 end
 
 closeButton.MouseButton1Click:Connect(function()
@@ -347,7 +406,6 @@ prompt.Triggered:Connect(function(plr)
 			failEvolveFrame.Visible = true
 		end
 	else
-		_G.Notification("Your egg is still evolving. Please wait until it is complete.")
 		-- Skip...
 		promptSkipPurchase()
 

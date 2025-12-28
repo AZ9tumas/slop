@@ -100,11 +100,11 @@ if suc and info then
 	script.Parent.ScrollingFrame.Passes.SpawnZombified.Buy.TitleS.Text = info.PriceInRobux
 end
 script.Parent.ScrollingFrame.Passes.SpawnSecret.Buy.MouseButton1Click:Connect(function()
-	
+
 	MarketplaceService:PromptProductPurchase(player, productIds.SpawnFirst.Id)
 end)
 script.Parent.ScrollingFrame.Passes.SpawnZombified.Buy.MouseButton1Click:Connect(function()
-	
+
 	MarketplaceService:PromptProductPurchase(player, productIds.SpawnSecond.Id)
 end)
 
@@ -121,17 +121,17 @@ local suc,info = pcall(function()
 end)
 
 if suc  and info then
-    script.Parent.ScrollingFrame.x2Beaks.Buy.TitleS.Text = info.PriceInRobux
+	script.Parent.ScrollingFrame.x2Beaks.Buy.TitleS.Text = info.PriceInRobux
 end
 
 
 
 local suc,info = pcall(function()
-    return MarketplaceService:GetProductInfo(productIds.FlyingCarpet, Enum.InfoType.GamePass)
+	return MarketplaceService:GetProductInfo(productIds.FlyingCarpet, Enum.InfoType.GamePass)
 end)
 
 if suc  and info then
-    script.Parent.ScrollingFrame.FlyingCarpet.Buy.TitleS.Text = info.PriceInRobux
+	script.Parent.ScrollingFrame.FlyingCarpet.Buy.TitleS.Text = info.PriceInRobux
 end
 
 if ownsGamePass(game.Players.LocalPlayer,productIds.StarterPack) then
@@ -146,10 +146,10 @@ end)
 
 
 if ownsGamePass(game.Players.LocalPlayer,productIds.FlyingCarpet) then
-    script.Parent.ScrollingFrame.FlyingCarpet.Buy.TitleS.Text = "Owned"
+	script.Parent.ScrollingFrame.FlyingCarpet.Buy.TitleS.Text = "Owned"
 end
 script.Parent.ScrollingFrame.FlyingCarpet.Buy.MouseButton1Click:Connect(function()
-    MarketplaceService:PromptGamePassPurchase(player, productIds.FlyingCarpet)
+	MarketplaceService:PromptGamePassPurchase(player, productIds.FlyingCarpet)
 end)
 
 -- StarterPack Game Pass purchase button
@@ -158,8 +158,15 @@ script.Parent.ScrollingFrame.StarterPack.Buy.MouseButton1Click:Connect(function(
 end)
 
 script.Parent.ScrollingFrame.GravityEgg.Get.MouseButton1Click:Connect(function()
-	print("ye ok")
 	MarketplaceService:PromptProductPurchase(player, productIds.GravityEgg.Id)
+end)
+
+script.Parent.ScrollingFrame.GravityEgg.Get1.MouseButton1Click:Connect(function()
+	MarketplaceService:PromptProductPurchase(player, 3488522171)
+end)
+
+script.Parent.ScrollingFrame.GravityEgg.Get2.MouseButton1Click:Connect(function()
+	MarketplaceService:PromptProductPurchase(player, 3488522294)
 end)
 
 -- BEAK PACKS
